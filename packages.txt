@@ -1,3 +1,0 @@
-# Packages système pour Streamlit Cloud
-python3-dev
-build-essential
