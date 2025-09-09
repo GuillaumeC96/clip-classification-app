@@ -3,3 +3,8 @@ flask
 pillow
 numpy
 requests
+plotly
+pandas
+scikit-learn
+matplotlib
+seaborn
