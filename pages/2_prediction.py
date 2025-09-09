@@ -106,33 +106,30 @@ with col2:
                         st.bar_chart(scores_df.set_index('Catégorie'))
                         st.dataframe(scores_df)
                     
-                    # Génération de la heatmap d'attention si disponible
-                    if azure_client.is_onnx and not azure_client.use_simulated:
-                        st.subheader("🔥 Heatmap d'Attention ONNX")
-                        attention_result = azure_client.generate_attention_heatmap(image, product_name, description, specifications)
+                    # Génération de la heatmap d'attention ONNX
+                    st.subheader("🔥 Heatmap d'Attention ONNX")
+                    attention_result = azure_client.generate_attention_heatmap(image, product_name, description, specifications)
+                    
+                    if attention_result and 'heatmap' in attention_result:
+                        st.success("✅ Heatmap d'attention générée avec succès !")
                         
-                        if attention_result and 'heatmap' in attention_result:
-                            st.success("✅ Heatmap d'attention générée avec succès !")
-                            
-                            # Afficher la heatmap
-                            heatmap_data = attention_result['heatmap']
-                            fig, ax = plt.subplots(figsize=(10, 8))
-                            im = ax.imshow(heatmap_data, cmap='inferno', alpha=0.7)
-                            ax.set_title("Heatmap d'Attention CLIP ONNX")
-                            ax.axis('off')
-                            plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
-                            st.pyplot(fig)
-                            
-                            # Informations sur les mots-clés
-                            if 'keywords' in attention_result:
-                                st.write("**Mots-clés analysés :**")
-                                keywords = attention_result['keywords']
-                                for i, keyword in enumerate(keywords[:5], 1):
-                                    st.write(f"{i}. {keyword}")
-                        else:
-                            st.warning("⚠️ Impossible de générer la heatmap d'attention")
+                        # Afficher la heatmap
+                        heatmap_data = attention_result['heatmap']
+                        fig, ax = plt.subplots(figsize=(10, 8))
+                        im = ax.imshow(heatmap_data, cmap='inferno', alpha=0.7)
+                        ax.set_title("Heatmap d'Attention CLIP ONNX")
+                        ax.axis('off')
+                        plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+                        st.pyplot(fig)
+                        
+                        # Informations sur les mots-clés
+                        if 'keywords' in attention_result:
+                            st.write("**Mots-clés analysés :**")
+                            keywords = attention_result['keywords']
+                            for i, keyword in enumerate(keywords[:5], 1):
+                                st.write(f"{i}. {keyword}")
                     else:
-                        st.info("ℹ️ Heatmap d'attention non disponible en mode simulé")
+                        st.warning("⚠️ Impossible de générer la heatmap d'attention")
                         
                 else:
                     st.error(f"❌ Erreur lors de la prédiction: {result.get('error', 'Erreur inconnue')}")
