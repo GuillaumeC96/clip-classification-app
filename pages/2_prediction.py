@@ -153,7 +153,8 @@ with col2:
         
         with st.spinner("🔄 Analyse en cours..."):
             # Prédiction avec Azure ML
-            result = azure_client.predict(image, product_name, description, specifications)
+            text_description = f"{product_name} {description} {specifications}"
+            result = azure_client.predict_category(image, text_description)
             
             # Affichage des résultats
             if 'predicted_category' in result:
@@ -187,7 +188,7 @@ with col2:
                 
                 # Génération de la heatmap d'attention ONNX
                 st.subheader("🔥 Heatmap d'Attention ONNX")
-                attention_result = azure_client.generate_attention_heatmap(image, product_name, description, specifications)
+                attention_result = azure_client.generate_attention_heatmap(image, text_description)
                 
                 if attention_result and 'heatmap' in attention_result:
                     st.success("✅ Heatmap d'attention générée avec succès !")
@@ -242,12 +243,8 @@ if default_product and st.session_state.get('test_prediction_launched', False):
             image = Image.open(default_product['image_path'])
             
             # Prédiction avec Azure ML
-            result = azure_client.predict(
-                image, 
-                default_product['name'], 
-                default_product['description'], 
-                default_product['specifications']
-            )
+            text_description = f"{default_product['name']} {default_product['description']} {default_product['specifications']}"
+            result = azure_client.predict_category(image, text_description)
             
             # Affichage des résultats
             if 'predicted_category' in result:
@@ -281,12 +278,7 @@ if default_product and st.session_state.get('test_prediction_launched', False):
                 
                 # Génération de la heatmap d'attention ONNX
                 st.subheader("🔥 Heatmap d'Attention ONNX")
-                attention_result = azure_client.generate_attention_heatmap(
-                    image, 
-                    default_product['name'], 
-                    default_product['description'], 
-                    default_product['specifications']
-                )
+                attention_result = azure_client.generate_attention_heatmap(image, text_description)
                 
                 if attention_result and 'heatmap' in attention_result:
                     st.success("✅ Heatmap d'attention générée avec succès !")
