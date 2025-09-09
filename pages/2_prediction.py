@@ -8,6 +8,7 @@ import streamlit as st
 from PIL import Image
 import numpy as np
 import matplotlib.pyplot as plt
+import json
 from azure_client import get_azure_client
 
 # Importer le module d'accessibilité
@@ -51,10 +52,35 @@ def load_default_test_product():
             
             # Vérifier si l'image existe
             if os.path.exists(image_path):
+                # Nettoyer la description (enlever les \n et \t)
+                description = product['description'] if pd.notna(product['description']) else product['product_name']
+                if description:
+                    description = description.replace('\n', ' ').replace('\t', ' ').strip()
+                    # Garder seulement les 2 premières phrases pour la lisibilité
+                    sentences = description.split('. ')
+                    if len(sentences) > 2:
+                        description = '. '.join(sentences[:2]) + '.'
+                
+                # Nettoyer les spécifications (parser le format Ruby/JSON)
+                specs = product['product_specifications'] if pd.notna(product['product_specifications']) else f"Prix: {product['retail_price']} INR"
+                if specs and specs.startswith('{"product_specification"'):
+                    try:
+                        # Remplacer => par : pour convertir en JSON valide
+                        json_specs = specs.replace('=>', ':')
+                        specs_data = json.loads(json_specs)
+                        if 'product_specification' in specs_data:
+                            key_specs = []
+                            for spec in specs_data['product_specification'][:5]:  # Limiter à 5 specs
+                                if 'key' in spec and 'value' in spec:
+                                    key_specs.append(f"{spec['key']}: {spec['value']}")
+                            specs = '; '.join(key_specs) if key_specs else f"Prix: {product['retail_price']} INR"
+                    except:
+                        specs = f"Prix: {product['retail_price']} INR"
+                
                 return {
                     'name': product['product_name'],
-                    'description': product['product_name'],
-                    'specifications': f"Prix: {product['retail_price']} INR, Catégorie: {product['product_category_tree']}",
+                    'description': description,
+                    'specifications': specs,
                     'image_path': image_path,
                     'image_filename': image_filename
                 }
