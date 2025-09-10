@@ -69,12 +69,12 @@ class AzureMLClient:
                         'azureml' in self.endpoint_url.lower()))
         self.is_simulated = self.endpoint_url and 'simulated' in self.endpoint_url.lower()
         
-        # Gérer le mode simulé - par défaut activé pour plan gratuit
+        # Gérer le mode simulé - utiliser l'endpoint Azure ML si disponible
         if self.is_simulated or not self.endpoint_url:
             self.use_simulated = True
         else:
-            # Pour plan gratuit, utiliser le mode simulé par défaut
-            self.use_simulated = os.getenv('USE_SIMULATED_MODEL', 'true').lower() == 'true'
+            # Utiliser l'endpoint Azure ML si disponible
+            self.use_simulated = False
         
         # Afficher le statut de la configuration
         if show_warning:
