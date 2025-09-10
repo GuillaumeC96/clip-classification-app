@@ -4,7 +4,7 @@
 Si votre application se déploie correctement, vous verrez :
 - ✅ "Your app is ready!"
 - ✅ URL publique : `https://VOTRE-APP-NAME.streamlit.app`
-- ✅ Interface accessible avec interprétabilité ONNX
+- ✅ Interface accessible avec Azure ML ONNX
 
 ## 🚨 **Problèmes Courants et Solutions**
 
@@ -12,27 +12,27 @@ Si votre application se déploie correctement, vous verrez :
 **Symptôme** : "Deployment failed"
 **Solution** :
 - Vérifier que le repository est public
-- Vérifier que `accueil_streamlit_cloud.py` existe
+- Vérifier que les fichiers principaux existent
 - Vérifier que la branche `main` contient le code
 
 ### **2. Erreur 503 sur l'Application**
 **Symptôme** : "Application Error" ou "Service Unavailable"
 **Solution** :
-- L'application utilise le bon endpoint Azure ML
+- L'application utilise l'endpoint Azure ML de production
 - Vérifier les logs de déploiement sur Streamlit Cloud
 - Redémarrer l'application si nécessaire
 
-### **3. Interprétabilité Non Disponible**
-**Symptôme** : "Interprétabilité non trouvée"
+### **3. Prédiction Non Disponible**
+**Symptôme** : "Erreur lors de la prédiction"
 **Solution** :
 - L'endpoint Azure ML est configuré correctement
-- Les heatmaps et scores de mots-clés sont simulés
-- Fonctionnalité disponible pour démonstration
+- Vérifier la connectivité réseau
+- L'application utilise exclusivement Azure ML ONNX
 
 ### **4. Timeout de Déploiement**
 **Symptôme** : Déploiement qui prend trop de temps
 **Solution** :
-- Le repository est optimisé (328 MB)
+- Le repository est optimisé
 - Attendre 5-10 minutes maximum
 - Redémarrer le déploiement si nécessaire
 
@@ -50,19 +50,34 @@ git log --oneline -3
 curl https://clip-onnx-interpretability.azurewebsites.net/health
 ```
 
-### **Tester Localement**
+### **Tester l'Application Localement**
 ```bash
-streamlit run accueil_streamlit_cloud.py
+streamlit run pages/2_prediction.py
 ```
 
-## 📞 **Support**
-- **Streamlit Cloud** : [share.streamlit.io](https://share.streamlit.io)
-- **GitHub Repository** : [github.com/GuillaumeC96/clip-classification-app](https://github.com/GuillaumeC96/clip-classification-app)
-- **Logs de déploiement** : Disponibles sur Streamlit Cloud
+## 📋 **Structure du Projet**
+```
+application_clean/
+├── pages/
+│   ├── 1_eda.py              # Analyse exploratoire
+│   ├── 2_prediction.py       # Page de prédiction principale
+│   └── 3_configuration.py    # Configuration Azure ML
+├── azure_client.py           # Client Azure ML ONNX
+├── accessibility.py          # Module d'accessibilité
+├── produits_original.csv     # Dataset des produits
+├── Images/                   # Images des produits
+└── requirements.txt          # Dépendances Python
+```
 
-## 🎯 **Résultat Attendu**
-Application publique accessible avec :
-- ✅ Classification de produits CLIP ONNX
-- ✅ Interprétabilité (heatmaps + scores)
-- ✅ Interface accessible et responsive
-- ✅ Compatible plan gratuit Azure
+## 🎯 **Fonctionnalités Disponibles**
+- ✅ Classification de produits via Azure ML ONNX
+- ✅ Prétraitement identique au notebook
+- ✅ Interface d'accessibilité
+- ✅ Gestion des erreurs robuste
+- ✅ Support multi-formats d'images
+
+## 💡 **Conseils de Performance**
+- L'application utilise l'endpoint Azure ML de production
+- Les prédictions sont optimisées avec ONNX
+- Le prétraitement est identique au notebook de référence
+- Gestion automatique des erreurs de connectivité

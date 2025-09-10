@@ -1,27 +1,33 @@
 """
-Page de prédiction pour la version cloud avec Azure ML
+Page de prédiction de catégorie de produits
+Utilise Azure ML ONNX pour la classification d'images et de texte
 """
 
 import os
 import streamlit as st
 from PIL import Image
-import numpy as np
 import json
 import pandas as pd
 from azure_client import get_azure_client
 
 # Importer le module d'accessibilité
 import sys
-import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from accessibility import init_accessibility_state, render_accessibility_sidebar, apply_accessibility_styles
 
 # Initialiser l'état d'accessibilité
 init_accessibility_state()
 
+# Configuration de la page
+st.set_page_config(
+    page_title="Prédiction de Catégorie",
+    page_icon="🔮",
+    layout="wide"
+)
+
 st.title("🔮 Prédiction de Catégorie")
 
-# Client Azure ML
+# Initialiser le client Azure ML
 azure_client = get_azure_client(show_warning=False)
 
 # Afficher les options d'accessibilité dans la sidebar
@@ -32,15 +38,19 @@ apply_accessibility_styles()
 
 st.markdown("---")
 
-# Fonction pour charger le produit de test par défaut
 @st.cache_data
 def load_default_test_product():
-    """Charger le produit de test par défaut"""
+    """
+    Charger le produit de test par défaut depuis le dataset
+    
+    Returns:
+        dict: Informations du produit de test ou None si erreur
+    """
     try:
         # Charger les données des produits
         df = pd.read_csv('produits_original.csv')
         
-        # Produit de test par défaut (montre)
+        # Produit de test par défaut (montre Escort)
         test_product_id = '1120bc768623572513df956172ffefeb'
         product = df[df['uniq_id'] == test_product_id]
         
@@ -111,8 +121,9 @@ uploaded_file = st.file_uploader(
     help="Formats supportés : PNG, JPG, JPEG"
 )
 
+# Affichage de l'image
 if uploaded_file is not None:
-    # Afficher l'image
+    # Afficher l'image uploadée
     image = Image.open(uploaded_file)
     st.image(image, caption="Image uploadée", use_container_width=True)
     
@@ -153,7 +164,7 @@ if default_product and st.session_state.get('test_prediction_launched', False):
         placeholder="Ex: 6.1 pouces, 128GB, iOS 16"
     )
 else:
-    # Interface normale
+    # Interface normale pour saisie manuelle
     product_name = st.text_input(
         "Nom du produit",
         placeholder="Ex: iPhone 14 Pro"
@@ -186,14 +197,14 @@ if st.button("🔮 Prédire la catégorie", type="primary"):
         st.stop()
     
     with st.spinner("🔄 Analyse en cours..."):
-        # Prédiction avec Azure ML
+        # Prédiction avec Azure ML ONNX
         result = azure_client.predict_category(image, brand, product_name, description, specifications)
         
         # Affichage des résultats
         if 'predicted_category' in result:
             st.success("✅ Prédiction terminée !")
             
-            # Affichage en une seule colonne
+            # Affichage des résultats en trois colonnes
             col1, col2, col3 = st.columns(3)
             
             with col1:
@@ -214,9 +225,6 @@ if st.button("🔮 Prédire la catégorie", type="primary"):
                     "Confiance",
                     f"{confidence:.2%}"
                 )
-            
-            
-                
         else:
             st.error(f"❌ Erreur lors de la prédiction: {result.get('error', 'Erreur inconnue')}")
             
@@ -237,8 +245,7 @@ if st.button("🔮 Prédire la catégorie", type="primary"):
             else:
                 st.info("💡 Vérifiez la configuration de l'API Azure ML.")
 
-
 # Informations sur le modèle
 st.markdown("---")
-st.success("✅ Système de prédiction initialisé")
+st.success("✅ Système de prédiction Azure ML ONNX initialisé")
 st.info("💡 Prêt pour l'analyse d'images et la classification de produits")

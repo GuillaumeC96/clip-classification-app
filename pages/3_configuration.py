@@ -1,5 +1,6 @@
 """
-Page de configuration Azure ML pour Streamlit Cloud
+Page de configuration Azure ML
+Affiche le statut de l'endpoint Azure ML et les informations de débogage
 """
 
 import streamlit as st
@@ -8,13 +9,19 @@ import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from azure_client import get_azure_client
-# from streamlit_secrets_config import get_azure_config  # Module supprimé
 
 # Importer le module d'accessibilité
 from accessibility import init_accessibility_state, render_accessibility_sidebar, apply_accessibility_styles
 
 # Initialiser l'état d'accessibilité
 init_accessibility_state()
+
+# Configuration de la page
+st.set_page_config(
+    page_title="Configuration Azure ML",
+    page_icon="⚙️",
+    layout="wide"
+)
 
 st.title("⚙️ Configuration Azure ML")
 
@@ -29,11 +36,11 @@ st.markdown("---")
 # Section 1: Statut actuel de la configuration
 st.header("📊 Statut actuel de la configuration")
 
-# Configuration par défaut (streamlit_secrets_config supprimé)
+# Configuration de production
 config = {
-    'endpoint_url': "https://your-endpoint.westeurope.inference.ml.azure.com/score",
-    'api_key': "your_api_key_here",
-    'source': 'default_hardcoded'
+    'endpoint_url': "https://clip-onnx-interpretability.azurewebsites.net/score",
+    'api_key': "dummy_key",
+    'source': 'azure_ml_production'
 }
 
 col1, col2 = st.columns(2)
@@ -41,7 +48,7 @@ col1, col2 = st.columns(2)
 with col1:
     st.subheader("🔍 Configuration détectée")
     st.write(f"**Source:** {config['source']}")
-    st.write(f"**Endpoint URL:** {config['endpoint_url'] or 'Non configuré'}")
+    st.write(f"**Endpoint URL:** {config['endpoint_url']}")
     st.write(f"**API Key:** {'Configurée' if config['api_key'] else 'Non configurée'}")
 
 with col2:
@@ -67,9 +74,6 @@ try:
         st.write(f"**Is ONNX:** {azure_client.is_onnx}")
     
     with col2:
-        st.write(f"**Use Simulated:** {azure_client.use_simulated}")
-        st.write(f"**Is Simulated:** {azure_client.is_simulated}")
-        
         # Test de connectivité
         if st.button("🔗 Tester la connectivité"):
             with st.spinner("Test de connectivité en cours..."):
@@ -79,8 +83,6 @@ try:
                 
                 if status['status'] == 'healthy':
                     st.success("✅ Service Azure ML accessible")
-                elif status['status'] == 'simulated':
-                    st.info("ℹ️ Système de prédiction initialisé")
                 else:
                     st.warning("⚠️ Service non accessible")
     
@@ -92,122 +94,67 @@ st.header("☁️ Configuration pour Streamlit Cloud")
 
 if is_cloud:
     st.info("🌐 Vous êtes sur Streamlit Cloud")
-    
-    if config['source'] == 'streamlit_secrets':
-        st.success("✅ Configuration Azure ML détectée dans les secrets Streamlit Cloud")
-        st.info("Votre application est correctement configurée !")
-    else:
-        st.warning("⚠️ Configuration Azure ML non détectée dans les secrets Streamlit Cloud")
-        
-        st.subheader("📋 Étapes de configuration :")
-        
-        st.markdown("""
-        1. **Allez sur [Streamlit Cloud](https://share.streamlit.io/)**
-        2. **Sélectionnez votre application**
-        3. **Cliquez sur 'Settings' (⚙️)**
-        4. **Cliquez sur 'Secrets'**
-        5. **Ajoutez ces secrets :**
-        """)
-        
-        st.code("""
-AZURE_ML_ENDPOINT_URL = "https://your-endpoint.westeurope.inference.ml.azure.com/score"
-AZURE_ML_API_KEY = "your_api_key_here"
-        """)
-        
-        st.markdown("""
-        6. **Cliquez sur 'Save'**
-        7. **Attendez le redéploiement automatique**
-        """)
-        
-        st.info("💡 Remplacez `your-endpoint` et `your_api_key_here` par vos vraies valeurs Azure ML")
-        
-else:
-    st.info("💻 Vous êtes en développement")
-    
-    if config['source'] == 'env_vars':
-        st.success("✅ Configuration Azure ML détectée dans les variables d'environnement")
-    else:
-        st.info("ℹ️ Configuration par défaut utilisée")
-        
-        st.subheader("📋 Configuration développement :")
-        st.markdown("""
-        Pour configurer Azure ML en développement, créez un fichier `.env_azure_production` :
-        """)
-        
-        st.code("""
-AZURE_ML_ENDPOINT_URL=https://your-endpoint.westeurope.inference.ml.azure.com/score
-AZURE_ML_API_KEY=your_api_key_here
-        """)
-
-# Section 4: Informations sur les endpoints Azure ML
-st.header("🔗 Types d'endpoints Azure ML")
-
-st.markdown("""
-### 🎯 Endpoints Azure ML supportés :
-
-1. **Azure ML Managed Endpoint** (recommandé)
-   ```
-   https://your-endpoint.westeurope.inference.ml.azure.com/score
-   ```
-
-2. **Azure Container Instance (ACI)**
-   ```
-   https://your-endpoint.westeurope.azurecontainer.io/score
-   ```
-
-3. **Azure Kubernetes Service (AKS)**
-   ```
-   https://your-endpoint.westeurope.cloudapp.azure.com/score
-   ```
-
-4. **Azure App Service**
-   ```
-   https://your-endpoint.azurewebsites.net/api/predict
-   ```
-""")
-
-# Section 5: Dépannage
-st.header("🔧 Dépannage")
-
-with st.expander("❓ Problèmes courants et solutions"):
     st.markdown("""
-    ### 🚨 "AZURE_ML_ENDPOINT_URL non configuré"
+    ### 📋 Configuration des secrets Streamlit Cloud
     
-    **Cause :** Les secrets Azure ML ne sont pas configurés dans Streamlit Cloud
+    Pour configurer l'endpoint Azure ML sur Streamlit Cloud :
     
-    **Solution :**
-    1. Vérifiez que les secrets sont correctement configurés
-    2. Redéployez l'application
-    3. Vérifiez les logs de déploiement
+    1. **Accédez à votre dashboard Streamlit Cloud**
+    2. **Sélectionnez votre application**
+    3. **Cliquez sur "Settings" puis "Secrets"**
+    4. **Ajoutez les secrets suivants :**
     
-    ### 🌐 "Service non accessible"
+    ```toml
+    AZURE_ML_ENDPOINT_URL = "https://clip-onnx-interpretability.azurewebsites.net/score"
+    AZURE_ML_API_KEY = "dummy_key"
+    ```
     
-    **Cause :** L'endpoint Azure ML n'est pas accessible
+    5. **Sauvegardez et redéployez l'application**
+    """)
+else:
+    st.info("💻 Vous êtes en environnement de développement")
+    st.markdown("""
+    ### 🔧 Configuration locale
     
-    **Solutions :**
-    1. Vérifiez que l'endpoint est déployé et actif
-    2. Vérifiez la clé API
-    3. Testez l'endpoint directement avec curl ou Postman
-    
-    ### 🔑 "Erreur d'authentification"
-    
-    **Cause :** Clé API incorrecte ou expirée
-    
-    **Solution :**
-    1. Régénérez la clé API dans Azure ML
-    2. Mettez à jour les secrets Streamlit Cloud
-    
-    ### ⚡ "Timeout"
-    
-    **Cause :** L'endpoint met trop de temps à répondre
-    
-    **Solutions :**
-    1. Vérifiez les performances de l'endpoint
-    2. Augmentez le timeout dans la configuration
-    3. Optimisez le modèle ONNX
+    Pour le développement local, l'application utilise la configuration par défaut.
+    L'endpoint Azure ML de production est configuré automatiquement.
     """)
 
-# Section 6: Informations de débogage
+# Section 4: Informations sur l'endpoint
+st.header("🔗 Informations sur l'endpoint")
+
+st.markdown("""
+### 📡 Endpoint Azure ML ONNX
+
+**URL:** `https://clip-onnx-interpretability.azurewebsites.net/score`
+
+**Type:** Modèle CLIP optimisé ONNX
+
+**Fonctionnalités:**
+- ✅ Classification d'images
+- ✅ Analyse de texte
+- ✅ Prédiction de catégories de produits
+- ✅ Prétraitement identique au notebook
+
+**Format de requête:**
+```json
+{
+    "image": "base64_encoded_image",
+    "text": "processed_text_keywords"
+}
+```
+
+**Format de réponse:**
+```json
+{
+    "predicted_category": "Watches",
+    "confidence": 0.892,
+    "source": "azure_onnx_simulation"
+}
+```
+""")
+
+# Section 5: Informations de débogage
 st.header("🐛 Informations de débogage")
 
 with st.expander("📋 Détails techniques"):
@@ -220,8 +167,7 @@ with st.expander("📋 Détails techniques"):
     Variables d'environnement:
     - AZURE_ML_ENDPOINT_URL: {os.getenv('AZURE_ML_ENDPOINT_URL', 'Non défini')}
     - AZURE_ML_API_KEY: {'Défini' if os.getenv('AZURE_ML_API_KEY') else 'Non défini'}
-    - USE_SIMULATED_MODEL: {os.getenv('USE_SIMULATED_MODEL', 'Non défini')}
     """)
 
 st.markdown("---")
-st.info("💡 **Conseil :** Après avoir configuré les secrets, redéployez votre application pour que les changements prennent effet.")
+st.info("💡 **Conseil :** L'application utilise l'endpoint Azure ML de production par défaut.")
