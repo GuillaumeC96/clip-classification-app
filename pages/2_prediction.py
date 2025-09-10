@@ -213,11 +213,11 @@ with col2:
                     st.dataframe(scores_df)
                 
                 # Génération de la heatmap d'attention ONNX
-                st.subheader("🔥 Heatmap d'Attention ONNX")
+                st.subheader("🔥 Interprétabilité de la Prédiction")
                 attention_result = azure_client.generate_attention_heatmap(image, text_description)
                 
                 if attention_result and 'heatmap' in attention_result:
-                    st.success("✅ Heatmap d'attention générée avec succès !")
+                    st.success("✅ Interprétabilité générée avec succès !")
                     
                     # Afficher la heatmap
                     heatmap_data = attention_result['heatmap']
@@ -230,12 +230,12 @@ with col2:
                     
                     # Informations sur les mots-clés
                     if 'keywords' in attention_result:
-                        st.write("**Mots-clés analysés :**")
+                        st.subheader("🔍 Analyse des Mots-clés")
                         keywords = attention_result['keywords']
                         for i, keyword in enumerate(keywords[:5], 1):
                             st.write(f"{i}. {keyword}")
                 else:
-                    st.warning("⚠️ Impossible de générer la heatmap d'attention")
+                    st.warning("⚠️ Impossible de générer l'interprétabilité")
                     
             else:
                 st.error(f"❌ Erreur lors de la prédiction: {result.get('error', 'Erreur inconnue')}")
@@ -257,78 +257,6 @@ with col2:
                 else:
                     st.info("💡 Vérifiez la configuration de l'API Azure ML.")
 
-# Lancer automatiquement la prédiction sur le produit de test
-if default_product and st.session_state.get('test_prediction_launched', False):
-    st.markdown("---")
-    st.info("🎯 **Prédiction automatique sur le produit de test**")
-    
-    # Lancer la prédiction automatiquement
-    if st.button("🚀 Lancer la prédiction automatique", type="primary"):
-        with st.spinner("🔄 Analyse automatique en cours..."):
-            # Charger l'image du produit de test
-            image = Image.open(default_product['image_path'])
-            
-            # Prédiction avec Azure ML
-            text_description = f"{default_product['name']} {default_product['description']} {default_product['specifications']}"
-            result = azure_client.predict_category(image, text_description)
-            
-            # Affichage des résultats
-            if 'predicted_category' in result:
-                st.success("✅ Prédiction automatique terminée !")
-                
-                col1, col2 = st.columns(2)
-                
-                with col1:
-                    st.metric(
-                        "Catégorie prédite",
-                        result['predicted_category']
-                    )
-                
-                with col2:
-                    confidence = result.get('confidence', 0.0)
-                    st.metric(
-                        "Confiance",
-                        f"{confidence:.2%}"
-                    )
-                
-                # Scores détaillés si disponibles
-                if 'category_scores' in result:
-                    st.subheader("📊 Scores par catégorie")
-                    scores_df = pd.DataFrame(
-                        list(result['category_scores'].items()),
-                        columns=['Catégorie', 'Score']
-                    ).sort_values('Score', ascending=False)
-                    
-                    st.bar_chart(scores_df.set_index('Catégorie'))
-                    st.dataframe(scores_df)
-                
-                # Génération de la heatmap d'attention ONNX
-                st.subheader("🔥 Heatmap d'Attention ONNX")
-                attention_result = azure_client.generate_attention_heatmap(image, text_description)
-                
-                if attention_result and 'heatmap' in attention_result:
-                    st.success("✅ Heatmap d'attention générée avec succès !")
-                    
-                    # Afficher la heatmap
-                    heatmap_data = attention_result['heatmap']
-                    fig, ax = plt.subplots(figsize=(10, 8))
-                    im = ax.imshow(heatmap_data, cmap='inferno', alpha=0.7)
-                    ax.set_title("Heatmap d'Attention CLIP ONNX")
-                    ax.axis('off')
-                    plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
-                    st.pyplot(fig)
-                    
-                    # Informations sur les mots-clés
-                    if 'keywords' in attention_result:
-                        st.write("**Mots-clés analysés :**")
-                        keywords = attention_result['keywords']
-                        for i, keyword in enumerate(keywords[:5], 1):
-                            st.write(f"{i}. {keyword}")
-                else:
-                    st.warning("⚠️ Impossible de générer la heatmap d'attention")
-                    
-            else:
-                st.error(f"❌ Erreur lors de la prédiction automatique: {result.get('error', 'Erreur inconnue')}")
 
 # Informations sur le modèle
 st.markdown("---")
