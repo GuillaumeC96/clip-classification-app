@@ -77,6 +77,7 @@ def load_default_test_product():
                 
                 return {
                     'name': product['product_name'],
+                    'brand': product['brand'] if pd.notna(product['brand']) else 'Marque non spécifiée',
                     'description': description,
                     'specifications': specs,
                     'image_path': image_path,
@@ -133,6 +134,12 @@ if default_product and st.session_state.get('test_prediction_launched', False):
         placeholder="Ex: iPhone 14 Pro"
     )
     
+    brand = st.text_input(
+        "Marque du produit",
+        value=default_product['brand'],
+        placeholder="Ex: Apple"
+    )
+    
     description = st.text_area(
         "Description du produit",
         value=default_product['description'],
@@ -149,6 +156,11 @@ else:
     product_name = st.text_input(
         "Nom du produit",
         placeholder="Ex: iPhone 14 Pro"
+    )
+    
+    brand = st.text_input(
+        "Marque du produit",
+        placeholder="Ex: Apple"
     )
     
     description = st.text_area(
@@ -174,7 +186,7 @@ if st.button("🔮 Prédire la catégorie", type="primary"):
     
     with st.spinner("🔄 Analyse en cours..."):
         # Prédiction avec Azure ML
-        text_description = f"{product_name} {description} {specifications}"
+        text_description = f"{brand} {product_name} {description} {specifications}"
         result = azure_client.predict_category(image, text_description)
         
         # Affichage des résultats
@@ -182,16 +194,26 @@ if st.button("🔮 Prédire la catégorie", type="primary"):
             st.success("✅ Prédiction terminée !")
             
             # Affichage en une seule colonne
-            st.metric(
-                "Catégorie prédite",
-                result['predicted_category']
-            )
+            col1, col2, col3 = st.columns(3)
             
-            confidence = result.get('confidence', 0.0)
-            st.metric(
-                "Confiance",
-                f"{confidence:.2%}"
-            )
+            with col1:
+                st.metric(
+                    "Marque",
+                    brand if brand else "Non spécifiée"
+                )
+            
+            with col2:
+                st.metric(
+                    "Catégorie prédite",
+                    result['predicted_category']
+                )
+            
+            with col3:
+                confidence = result.get('confidence', 0.0)
+                st.metric(
+                    "Confiance",
+                    f"{confidence:.2%}"
+                )
             
             
                 
