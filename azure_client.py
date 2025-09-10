@@ -34,11 +34,11 @@ class AzureMLClient:
                         'inference.ml.azure.com' in self.endpoint_url.lower() or
                         'azureml' in self.endpoint_url.lower()))
         
-        # Configuration par défaut - Backend CLIP local avec vraies heatmaps
+        # Configuration par défaut - Endpoint Azure ML cloud
         config = {
-            'endpoint_url': "http://localhost:5000/score",
+            'endpoint_url': "https://clip-onnx-interpretability.azurewebsites.net/score",
             'api_key': "dummy_key",
-            'source': 'local_clip_backend'
+            'source': 'default_azure_ml'
         }
         
         # Vérifier s'il y a des secrets Streamlit configurés (IGNORER pour utiliser le bon endpoint)
@@ -283,8 +283,16 @@ class AzureMLClient:
             
             if response.status_code == 200:
                 result = response.json()
-                if 'heatmap' in result:
-                    # Convertir la heatmap de liste vers numpy array
+                
+                # Gérer la structure de réponse du backend cloud
+                if 'attention_result' in result and 'heatmap' in result['attention_result']:
+                    # Backend cloud - heatmap dans attention_result
+                    attention_result = result['attention_result']
+                    import numpy as np
+                    attention_result['heatmap'] = np.array(attention_result['heatmap'])
+                    return attention_result
+                elif 'heatmap' in result:
+                    # Backend local - heatmap directement
                     import numpy as np
                     result['heatmap'] = np.array(result['heatmap'])
                     return result
