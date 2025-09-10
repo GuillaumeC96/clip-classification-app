@@ -312,7 +312,7 @@ class AzureMLClient:
             img_bw = enhancer.enhance(1.5)
             img_bw_array = np.array(img_bw)
             
-            # Utiliser la même approche que le notebook : patch_size=128, step=patch_size
+            # Utiliser exactement la même approche que le notebook : patch_size=128, step=patch_size
             patch_size = 128
             step = patch_size
             
@@ -327,6 +327,7 @@ class AzureMLClient:
                         patch = patch.convert('RGB')
                         patch = patch.resize((224, 224), Image.LANCZOS)
                         patches.append(patch)
+                        # Stocker les positions comme dans le notebook : (x, y, x2, y2)
                         positions.append((x, y, min(x+patch_size, img_width), min(y+patch_size, img_height)))
             
             # Simuler exactement comme dans le notebook : attention_scores = (patch_features @ text_features.T)
@@ -343,6 +344,7 @@ class AzureMLClient:
             
             # Créer des zones d'attention plus réalistes basées sur la structure de l'image
             for i, (x, y, x2, y2) in enumerate(positions):
+                # Utiliser le centre du patch comme dans le notebook
                 center_x, center_y = (x + x2) // 2, (y + y2) // 2
                 
                 # Score de base basé sur la position du patch (plus réaliste)
@@ -351,7 +353,7 @@ class AzureMLClient:
                 max_distance = np.sqrt(img_center_x**2 + img_center_y**2)
                 
                 # Score de position avec décroissance exponentielle (plus réaliste)
-                position_score = np.exp(-distance_from_center / (max_distance * 0.4))
+                position_score = np.exp(-distance_from_center / (max_distance * 0.3))
                 
                 # Pour chaque mot-clé, calculer un score d'attention
                 for j, keyword in enumerate(keywords):
@@ -363,7 +365,7 @@ class AzureMLClient:
                     if keyword.lower() in text_description.lower():
                         # Simuler que certains patches sont plus pertinents pour certains mots-clés
                         # Utiliser une distribution plus réaliste
-                        keyword_bonus = np.random.beta(2, 5) * 0.6  # Distribution biaisée vers les valeurs faibles
+                        keyword_bonus = np.random.beta(2, 5) * 0.4  # Distribution biaisée vers les valeurs faibles
                     
                     # Score final pour ce patch et ce mot-clé
                     attention_scores[i, j] = base_score + keyword_bonus
@@ -373,7 +375,8 @@ class AzureMLClient:
             
             # Utiliser exactement la même interpolation que le notebook
             # Dans le notebook : smooth_heatmap = griddata(points, attention_scores.mean(axis=1), (grid_x, grid_y), method='cubic', fill_value=0)
-            points = np.array(positions)
+            # Convertir les positions (x, y, x2, y2) en (x_pos, y_pos) comme dans le notebook
+            points = np.array([[(x + x2) // 2, (y + y2) // 2] for x, y, x2, y2 in positions])
             grid_x, grid_y = np.mgrid[0:img_width:complex(0, img_width), 0:img_height:complex(0, img_height)]
             smooth_heatmap = griddata(points, attention_scores.mean(axis=1), (grid_x, grid_y), method='cubic', fill_value=0)
             smooth_heatmap = (smooth_heatmap - smooth_heatmap.min()) / (smooth_heatmap.max() - smooth_heatmap.min())
