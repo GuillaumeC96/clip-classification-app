@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Interface principale pour le déploiement sur Streamlit Cloud
-Version simplifiée sans modèle simulé
+Version avec Azure ML ONNX
 """
 
 import os
@@ -17,7 +17,7 @@ from io import BytesIO
 
 # Configuration
 SEED = 42
-CSV_PATH = 'produits_demo.csv'
+CSV_PATH = 'produits_original.csv'
 
 # Configuration Azure ML ONNX par défaut
 AZURE_ML_ENDPOINT_URL = "https://your-endpoint.westeurope.inference.ml.azure.com/score"
@@ -29,6 +29,9 @@ Image.MAX_IMAGE_PIXELS = None
 
 # Importer le module d'accessibilité
 from accessibility import init_accessibility_state, render_accessibility_sidebar, apply_accessibility_styles
+
+# Importer le client Azure ML
+from azure_client import get_azure_client
 
 # Initialiser l'état d'accessibilité
 init_accessibility_state()
@@ -71,48 +74,6 @@ def load_and_process_data():
         st.error(f"Erreur lors du chargement des données : {str(e)}")
         return pd.DataFrame()
 
-def predict_with_demo_model(image, product_name, description, specifications):
-    """Prédiction avec un modèle de démonstration"""
-    # Simulation d'une prédiction basée sur des règles simples
-    combined_text = f"{product_name} {description} {specifications}".lower()
-    
-    # Catégories disponibles
-    categories = [
-        'Baby Care', 'Beauty and Personal Care', 'Computers',
-        'Home Decor & Festive Needs', 'Home Furnishing',
-        'Kitchen & Dining', 'Watches'
-    ]
-    
-    # Règles simples basées sur les mots-clés
-    category_keywords = {
-        'Baby Care': ['baby', 'enfant', 'bébé', 'nourrisson', 'couche', 'jouet'],
-        'Beauty and Personal Care': ['beauté', 'cosmétique', 'soin', 'shampooing', 'crème', 'maquillage'],
-        'Computers': ['ordinateur', 'laptop', 'pc', 'computer', 'écran', 'clavier'],
-        'Home Decor & Festive Needs': ['déco', 'décoration', 'fête', 'festif', 'ornement'],
-        'Home Furnishing': ['meuble', 'furniture', 'canapé', 'table', 'chaise', 'lit'],
-        'Kitchen & Dining': ['cuisine', 'kitchen', 'vaisselle', 'casserole', 'four', 'réfrigérateur'],
-        'Watches': ['montre', 'watch', 'horloge', 'chronomètre', 'bracelet']
-    }
-    
-    # Calculer les scores
-    scores = {}
-    for category, keywords in category_keywords.items():
-        score = sum(1 for keyword in keywords if keyword in combined_text)
-        scores[category] = score / len(keywords)
-    
-    # Prédiction
-    if max(scores.values()) > 0:
-        predicted_category = max(scores, key=scores.get)
-        confidence = max(scores.values())
-    else:
-        predicted_category = 'Home Furnishing'  # Catégorie par défaut
-        confidence = 0.1
-    
-    return {
-        'predicted_category': predicted_category,
-        'confidence': confidence,
-        'category_scores': scores
-    }
 
 def main():
     """Fonction principale de l'application"""
@@ -253,49 +214,50 @@ def main():
             if st.button("🔮 Prédire la catégorie", type="primary"):
                 if uploaded_file is not None:
                     with st.spinner("🔄 Analyse en cours..."):
-                        # Prédiction
-                        result = predict_with_demo_model(
-                            image, product_name, description, specifications
+                        # Prédiction via Azure ML
+                        azure_client = get_azure_client(show_warning=False)
+                        result = azure_client.predict_category(
+                            image, f"{product_name} {description}", specifications
                         )
                         
                         # Affichage des résultats
-                        st.success("✅ Prédiction terminée !")
-                        
-                        col1, col2 = st.columns(2)
-                        
-                        with col1:
-                            st.metric(
-                                "Catégorie prédite",
-                                result['predicted_category']
-                            )
-                        
-                        with col2:
-                            st.metric(
-                                "Confiance",
-                                f"{result['confidence']:.2%}"
-                            )
-                        
-                        # Scores détaillés
-                        st.subheader("📊 Scores par catégorie")
-                        scores_df = pd.DataFrame(
-                            list(result['category_scores'].items()),
-                            columns=['Catégorie', 'Score']
-                        ).sort_values('Score', ascending=False)
-                        
-                        st.bar_chart(scores_df.set_index('Catégorie'))
-                        st.dataframe(scores_df)
+                        if result.get('success', False):
+                            st.success("✅ Prédiction terminée !")
+                            
+                            col1, col2 = st.columns(2)
+                            
+                            with col1:
+                                st.metric(
+                                    "Catégorie prédite",
+                                    result['predicted_category']
+                                )
+                            
+                            with col2:
+                                st.metric(
+                                    "Confiance",
+                                    f"{result['confidence']:.2%}"
+                                )
+                            
+                            # Scores détaillés
+                            if 'category_scores' in result:
+                                st.subheader("📊 Scores par catégorie")
+                                scores_df = pd.DataFrame(
+                                    list(result['category_scores'].items()),
+                                    columns=['Catégorie', 'Score']
+                                ).sort_values('Score', ascending=False)
+                                
+                                st.bar_chart(scores_df.set_index('Catégorie'))
+                                st.dataframe(scores_df)
+                        else:
+                            st.error(f"❌ Erreur lors de la prédiction: {result.get('error', 'Erreur inconnue')}")
                         
                 else:
                     st.error("❌ Veuillez uploader une image avant de faire une prédiction")
         
         # Informations sur le modèle
         st.markdown("---")
-        st.success("🚀 Configuration Azure ML ONNX activée")
-        st.info("✅ Modèles ONNX optimisés pour des performances maximales")
-        st.info("""
-        ℹ️ **Note** : Cette application utilise des modèles CLIP ONNX déployés sur Azure ML.
-        Les prédictions sont effectuées via l'inférence ONNX optimisée pour des performances maximales.
-        """)
+        st.success("✅ Système de prédiction initialisé")
+        st.info("💡 Prêt pour l'analyse d'images et la classification de produits")
     
     elif page == "🔧 Configuration Endpoint":
         st.header("🔧 Configuration de l'Endpoint Azure ML ONNX")

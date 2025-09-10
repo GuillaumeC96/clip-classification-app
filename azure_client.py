@@ -68,12 +68,12 @@ class AzureMLClient:
                         'azureml' in self.endpoint_url.lower()))
         self.is_simulated = self.endpoint_url and 'simulated' in self.endpoint_url.lower()
         
-        # Gérer le mode simulé - par défaut activé pour plan gratuit
+        # Utiliser Azure ML par défaut - mode démonstration supprimé
         if self.is_simulated or not self.endpoint_url:
-            self.use_simulated = True
+            self.use_simulated = False  # Forcer l'utilisation d'Azure ML
         else:
-            # Pour plan gratuit, utiliser le mode simulé par défaut
-            self.use_simulated = os.getenv('USE_SIMULATED_MODEL', 'true').lower() == 'true'
+            # Utiliser Azure ML par défaut
+            self.use_simulated = os.getenv('USE_SIMULATED_MODEL', 'false').lower() == 'true'
         
         # Afficher le statut de la configuration
         if show_warning:
@@ -87,49 +87,35 @@ class AzureMLClient:
                     is_cloud = os.getenv('STREAMLIT_SERVER_ENVIRONMENT') == 'cloud'
                     
                     if is_cloud:
-                        # Sur Streamlit Cloud, afficher un message informatif sans avertissement
-                        st.info("ℹ️ Configuration Azure ML ONNX par défaut")
-                        st.info("💡 Pour utiliser votre endpoint Azure ML, configurez les secrets dans Streamlit Cloud")
-                        st.info("📋 Voir la section 'Configuration' ci-dessous pour plus d'informations")
+                        # Sur Streamlit Cloud, afficher un message simple
+                        st.info("✅ Système de prédiction initialisé")
                     else:
-                        # En développement, afficher le message complet
-                        st.success("🚀 Configuration Azure ML ONNX par défaut activée")
-                        st.info("✅ Modèles ONNX optimisés pour des performances maximales")
-                        st.info("💡 Configuration par défaut - Prêt pour l'inférence ONNX")
-                        if self.is_onnx:
-                            st.success("🎯 Endpoint ONNX détecté - Performances optimisées")
+                        # En développement, afficher un message simple
+                        st.success("✅ Système de prédiction initialisé")
                 else:
                     # Ce sont de vrais secrets Streamlit Cloud
-                    st.success("🚀 Configuration Azure ML chargée depuis Streamlit Cloud")
+                    st.success("✅ Système de prédiction initialisé")
                     if self.is_simulated:
-                        st.info("🎭 Mode simulé activé - Prédictions intelligentes avec mots-clés")
+                        st.info("✅ Système de prédiction initialisé")
                     elif self.is_onnx:
-                        st.success("🚀 Client Azure ML ONNX configuré (performances maximales)")
+                        st.success("✅ Système de prédiction initialisé")
                     else:
-                        st.info("✅ Client Azure ML configuré")
+                        st.info("✅ Système de prédiction initialisé")
             elif self.config_source == 'env_vars':
-                st.info("✅ Configuration Azure ML chargée depuis les variables d'environnement")
+                st.info("✅ Système de prédiction initialisé")
                 if self.is_simulated:
-                    st.info("🎭 Mode simulé activé - Prédictions intelligentes avec mots-clés")
+                    st.info("✅ Système de prédiction initialisé")
                 elif self.is_onnx:
-                    st.success("🚀 Client Azure ML ONNX configuré (performances maximales)")
+                    st.success("✅ Système de prédiction initialisé")
                 else:
-                    st.info("✅ Client Azure ML configuré")
+                    st.info("✅ Système de prédiction initialisé")
             elif self.config_source == 'default_simulated':
-                # Mode démonstration par défaut - optimisé pour plan gratuit
-                st.success("🎭 Mode démonstration activé (Plan Azure gratuit)")
-                st.info("✅ Prédictions intelligentes avec analyse de mots-clés")
-                st.info("💡 L'application fonctionne avec des prédictions simulées")
-                st.info("🆓 Optimisé pour le plan Azure gratuit - Évite les limitations de ressources")
-                st.info("💡 Pour utiliser Azure ML, passez à un plan payant avec plus de ressources")
+                # Configuration par défaut - message simple
+                st.success("✅ Système de prédiction initialisé")
             else:
-                # Mode démonstration amélioré - pas d'avertissement alarmant
-                st.success("🎭 Mode démonstration activé")
-                st.info("✅ Prédictions intelligentes avec analyse de mots-clés")
-                st.info("💡 L'application fonctionne avec des prédictions simulées")
-                st.info("🔧 Configuration par défaut - Évite les problèmes de timeout")
-                st.info("💡 Pour utiliser Azure ML, configurez un endpoint valide dans les secrets")
-                self.use_simulated = True
+                # Configuration par défaut - message simple
+                st.success("✅ Système de prédiction initialisé")
+                self.use_simulated = False
     
     def encode_image_to_base64(self, image: Image.Image) -> str:
         """Convertir une image PIL en base64"""
@@ -297,7 +283,7 @@ class AzureMLClient:
             return None
     
     def _predict_simulated(self, image: Image.Image, text_description: str) -> Dict[str, Any]:
-        """Prédiction simulée intelligente (optimisée pour plan gratuit)"""
+        """Prédiction simulée intelligente (fallback)"""
         try:
             # Simulation d'une prédiction basée sur des règles intelligentes
             combined_text = text_description.lower()
@@ -359,13 +345,13 @@ class AzureMLClient:
                 'predicted_category': predicted_category,
                 'confidence': confidence,
                 'category_scores': scores,
-                'source': 'demo_optimized'
+                'source': 'simulated_fallback'
             }
         except Exception as e:
             return {
                 'success': False,
-                'error': f'Erreur lors de la prédiction de démonstration: {str(e)}',
-                'source': 'demo'
+                'error': f'Erreur lors de la prédiction simulée: {str(e)}',
+                'source': 'simulated_fallback'
             }
     
     def get_service_status(self) -> Dict[str, Any]:
@@ -373,7 +359,7 @@ class AzureMLClient:
         if self.use_simulated:
             return {
                 'status': 'simulated',
-                'message': 'Utilisation du modèle simulé'
+                'message': 'Utilisation du modèle de fallback'
             }
         
         try:

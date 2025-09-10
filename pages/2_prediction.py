@@ -23,7 +23,7 @@ init_accessibility_state()
 st.title("🔮 Prédiction de Catégorie")
 
 # Client Azure ML
-azure_client = get_azure_client()
+azure_client = get_azure_client(show_warning=False)
 
 # Afficher les options d'accessibilité dans la sidebar
 render_accessibility_sidebar()
@@ -332,9 +332,5 @@ if default_product and st.session_state.get('test_prediction_launched', False):
 
 # Informations sur le modèle
 st.markdown("---")
-st.success("🚀 Configuration Azure ML ONNX activée")
-st.info("✅ Modèles ONNX optimisés pour des performances maximales")
-st.info("""
-ℹ️ **Note** : Cette application utilise des modèles CLIP ONNX déployés sur Azure ML.
-Les prédictions sont effectuées via l'inférence ONNX optimisée pour des performances maximales.
-""")
+st.success("✅ Système de prédiction initialisé")
+st.info("💡 Prêt pour l'analyse d'images et la classification de produits")

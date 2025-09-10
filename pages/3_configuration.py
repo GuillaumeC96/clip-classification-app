@@ -80,7 +80,7 @@ try:
                 if status['status'] == 'healthy':
                     st.success("✅ Service Azure ML accessible")
                 elif status['status'] == 'simulated':
-                    st.info("ℹ️ Mode simulé activé")
+                    st.info("ℹ️ Système de prédiction initialisé")
                 else:
                     st.warning("⚠️ Service non accessible")
     

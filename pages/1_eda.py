@@ -34,7 +34,7 @@ if 'df' not in st.session_state:
             # Charger les données
             df = pd.read_csv('produits_original.csv')
             
-            # Traiter les catégories (structure différente dans produits_demo.csv)
+            # Traiter les catégories (structure différente dans produits_original.csv)
             import ast
             df['categories'] = df['product_category_tree'].apply(lambda x: ast.literal_eval(x) if isinstance(x, str) else x)
             # Extraire seulement la catégorie principale (avant le premier >>)
