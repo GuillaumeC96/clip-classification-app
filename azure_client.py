@@ -341,27 +341,32 @@ class AzureMLClient:
             # Créer une matrice de scores d'attention (n_patches, n_keywords)
             attention_scores = np.zeros((n_patches, n_keywords))
             
+            # Créer des zones d'attention plus réalistes basées sur la structure de l'image
             for i, (x, y, x2, y2) in enumerate(positions):
                 center_x, center_y = (x + x2) // 2, (y + y2) // 2
                 
+                # Score de base basé sur la position du patch (plus réaliste)
+                img_center_x, img_center_y = img_width // 2, img_height // 2
+                distance_from_center = np.sqrt((center_x - img_center_x)**2 + (center_y - img_center_y)**2)
+                max_distance = np.sqrt(img_center_x**2 + img_center_y**2)
+                
+                # Score de position avec décroissance exponentielle (plus réaliste)
+                position_score = np.exp(-distance_from_center / (max_distance * 0.4))
+                
                 # Pour chaque mot-clé, calculer un score d'attention
                 for j, keyword in enumerate(keywords):
-                    # Score de base basé sur la position du patch
-                    img_center_x, img_center_y = img_width // 2, img_height // 2
-                    distance_from_center = np.sqrt((center_x - img_center_x)**2 + (center_y - img_center_y)**2)
-                    max_distance = np.sqrt(img_center_x**2 + img_center_y**2)
-                    
-                    # Score de position (plus élevé au centre)
-                    position_score = 1.0 - (distance_from_center / max_distance)
+                    # Score de base pour ce patch
+                    base_score = position_score
                     
                     # Bonus si le mot-clé est pertinent pour ce patch
-                    keyword_relevance = 0.0
+                    keyword_bonus = 0.0
                     if keyword.lower() in text_description.lower():
                         # Simuler que certains patches sont plus pertinents pour certains mots-clés
-                        keyword_relevance = np.random.uniform(0.3, 0.8)
+                        # Utiliser une distribution plus réaliste
+                        keyword_bonus = np.random.beta(2, 5) * 0.6  # Distribution biaisée vers les valeurs faibles
                     
                     # Score final pour ce patch et ce mot-clé
-                    attention_scores[i, j] = position_score + keyword_relevance
+                    attention_scores[i, j] = base_score + keyword_bonus
             
             # Normaliser les scores comme dans le notebook
             attention_scores = (attention_scores - attention_scores.min()) / (attention_scores.max() - attention_scores.min())
