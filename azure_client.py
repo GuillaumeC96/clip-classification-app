@@ -165,9 +165,11 @@ class AzureMLClient:
             cleaned_specs = self._process_specs_like_notebook(specifications)
             
             # Créer le combined_text identique au notebook
+            # Ne pas inclure "Marque non spécifiée" dans le texte de prédiction
+            brand_text = brand.lower() if brand and brand != 'Marque non spécifiée' else ''
             combined_text = (
                 product_name.lower() + '. ' +
-                (brand.lower() if brand else '') + '. ' +
+                (brand_text + '. ' if brand_text else '') +
                 cleaned_specs.lower() + '. ' +
                 description.lower()
             )
