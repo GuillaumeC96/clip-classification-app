@@ -34,11 +34,11 @@ class AzureMLClient:
                         'inference.ml.azure.com' in self.endpoint_url.lower() or
                         'azureml' in self.endpoint_url.lower()))
         
-        # Configuration par défaut - Endpoint Azure ML fonctionnel
+        # Configuration par défaut - Backend CLIP local avec vraies heatmaps
         config = {
-            'endpoint_url': "https://clip-onnx-interpretability.azurewebsites.net/score",
+            'endpoint_url': "http://localhost:5000/score",
             'api_key': "dummy_key",
-            'source': 'default_azure_ml'
+            'source': 'local_clip_backend'
         }
         
         # Vérifier s'il y a des secrets Streamlit configurés (IGNORER pour utiliser le bon endpoint)
