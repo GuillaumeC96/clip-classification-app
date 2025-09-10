@@ -68,12 +68,12 @@ class AzureMLClient:
                         'azureml' in self.endpoint_url.lower()))
         self.is_simulated = self.endpoint_url and 'simulated' in self.endpoint_url.lower()
         
-        # Utiliser Azure ML par défaut - mode démonstration supprimé
+        # Gérer le mode simulé - par défaut activé pour plan gratuit
         if self.is_simulated or not self.endpoint_url:
-            self.use_simulated = False  # Forcer l'utilisation d'Azure ML
+            self.use_simulated = True
         else:
-            # Utiliser Azure ML par défaut
-            self.use_simulated = os.getenv('USE_SIMULATED_MODEL', 'false').lower() == 'true'
+            # Pour plan gratuit, utiliser le mode simulé par défaut
+            self.use_simulated = os.getenv('USE_SIMULATED_MODEL', 'true').lower() == 'true'
         
         # Afficher le statut de la configuration
         if show_warning:
@@ -87,35 +87,49 @@ class AzureMLClient:
                     is_cloud = os.getenv('STREAMLIT_SERVER_ENVIRONMENT') == 'cloud'
                     
                     if is_cloud:
-                        # Sur Streamlit Cloud, afficher un message simple
-                        st.info("✅ Système de prédiction initialisé")
+                        # Sur Streamlit Cloud, afficher un message informatif sans avertissement
+                        st.info("ℹ️ Configuration Azure ML ONNX par défaut")
+                        st.info("💡 Pour utiliser votre endpoint Azure ML, configurez les secrets dans Streamlit Cloud")
+                        st.info("📋 Voir la section 'Configuration' ci-dessous pour plus d'informations")
                     else:
-                        # En développement, afficher un message simple
-                        st.success("✅ Système de prédiction initialisé")
+                        # En développement, afficher le message complet
+                        st.success("🚀 Configuration Azure ML ONNX par défaut activée")
+                        st.info("✅ Modèles ONNX optimisés pour des performances maximales")
+                        st.info("💡 Configuration par défaut - Prêt pour l'inférence ONNX")
+                        if self.is_onnx:
+                            st.success("🎯 Endpoint ONNX détecté - Performances optimisées")
                 else:
                     # Ce sont de vrais secrets Streamlit Cloud
-                    st.success("✅ Système de prédiction initialisé")
+                    st.success("🚀 Configuration Azure ML chargée depuis Streamlit Cloud")
                     if self.is_simulated:
-                        st.info("✅ Système de prédiction initialisé")
+                        st.info("🎭 Mode simulé activé - Prédictions intelligentes avec mots-clés")
                     elif self.is_onnx:
-                        st.success("✅ Système de prédiction initialisé")
+                        st.success("🚀 Client Azure ML ONNX configuré (performances maximales)")
                     else:
-                        st.info("✅ Système de prédiction initialisé")
+                        st.info("✅ Client Azure ML configuré")
             elif self.config_source == 'env_vars':
-                st.info("✅ Système de prédiction initialisé")
+                st.info("✅ Configuration Azure ML chargée depuis les variables d'environnement")
                 if self.is_simulated:
-                    st.info("✅ Système de prédiction initialisé")
+                    st.info("🎭 Mode simulé activé - Prédictions intelligentes avec mots-clés")
                 elif self.is_onnx:
-                    st.success("✅ Système de prédiction initialisé")
+                    st.success("🚀 Client Azure ML ONNX configuré (performances maximales)")
                 else:
-                    st.info("✅ Système de prédiction initialisé")
+                    st.info("✅ Client Azure ML configuré")
             elif self.config_source == 'default_simulated':
-                # Configuration par défaut - message simple
-                st.success("✅ Système de prédiction initialisé")
+                # Mode démonstration par défaut - optimisé pour plan gratuit
+                st.success("🎭 Mode démonstration activé (Plan Azure gratuit)")
+                st.info("✅ Prédictions intelligentes avec analyse de mots-clés")
+                st.info("💡 L'application fonctionne avec des prédictions simulées")
+                st.info("🆓 Optimisé pour le plan Azure gratuit - Évite les limitations de ressources")
+                st.info("💡 Pour utiliser Azure ML, passez à un plan payant avec plus de ressources")
             else:
-                # Configuration par défaut - message simple
-                st.success("✅ Système de prédiction initialisé")
-                self.use_simulated = False
+                # Mode démonstration amélioré - pas d'avertissement alarmant
+                st.success("🎭 Mode démonstration activé")
+                st.info("✅ Prédictions intelligentes avec analyse de mots-clés")
+                st.info("💡 L'application fonctionne avec des prédictions simulées")
+                st.info("🔧 Configuration par défaut - Évite les problèmes de timeout")
+                st.info("💡 Pour utiliser Azure ML, configurez un endpoint valide dans les secrets")
+                self.use_simulated = True
     
     def encode_image_to_base64(self, image: Image.Image) -> str:
         """Convertir une image PIL en base64"""
@@ -173,21 +187,13 @@ class AzureMLClient:
             
             if response.status_code == 200:
                 result = response.json()
-                # Debug: afficher la réponse de l'API
-                print(f"🔍 Réponse API Azure ML: {result}")
-                
                 # Vérifier si la réponse contient les données attendues
                 if 'predicted_category' in result or 'attention_result' in result:
-                    # Générer des scores simulés si manquants
-                    category_scores = result.get('category_scores', {})
-                    if not category_scores:
-                        category_scores = self._generate_simulated_scores(result.get('predicted_category', ''), text_description)
-                    
                     return {
                         'success': True,
                         'predicted_category': result.get('predicted_category'),
                         'confidence': result.get('confidence', 0),
-                        'category_scores': category_scores,
+                        'category_scores': result.get('category_scores', {}),
                         'source': result.get('source', 'azure_ml'),
                         'attention_result': result.get('attention_result')  # Ajouter les résultats d'interprétabilité
                     }
@@ -235,7 +241,7 @@ class AzureMLClient:
     
     def generate_attention_heatmap(self, image: Image.Image, text_description: str, product_keywords: str = None) -> Optional[Dict[str, Any]]:
         """
-        Générer une heatmap d'attention (simulée pour l'instant)
+        Générer une heatmap d'attention via l'API Azure ML ONNX (LOGIQUE IDENTIQUE AU NOTEBOOK)
         
         Args:
             image: Image PIL du produit
@@ -245,161 +251,55 @@ class AzureMLClient:
         Returns:
             Dict contenant la heatmap d'attention ou None
         """
+        # TOUJOURS utiliser Azure ML pour les heatmaps - pas de simulation locale
+        # if self.use_simulated or not self.is_onnx:
+        #     return None  # Heatmap non disponible en mode simulé ou non-ONNX
+        
         try:
-            # Pour l'instant, utiliser directement la heatmap simulée
-            # car l'API Azure ML ne semble pas supporter la génération de heatmap
-            print(f"🔍 Génération de heatmap simulée pour: {text_description[:50]}...")
-            return self._generate_simulated_heatmap(image, text_description)
+            # Encoder l'image
+            image_b64 = self.encode_image_to_base64(image)
+            
+            # Préparer les données pour Azure ML (LOGIQUE IDENTIQUE AU NOTEBOOK)
+            data = {
+                'image': image_b64,
+                'text_description': text_description,
+                'product_keywords': product_keywords,  # Mots-clés du CSV
+                'action': 'heatmap'
+            }
+            
+            # Headers
+            headers = {
+                'Content-Type': 'application/json',
+                'Authorization': f'Bearer {self.api_key}'
+            }
+            
+            # Appel API
+            response = requests.post(
+                self.endpoint_url,
+                json=data,
+                headers=headers,
+                timeout=120
+            )
+            
+            if response.status_code == 200:
+                result = response.json()
+                if 'heatmap' in result:
+                    # Convertir la heatmap de liste vers numpy array
+                    import numpy as np
+                    result['heatmap'] = np.array(result['heatmap'])
+                    return result
+                else:
+                    return None
+            else:
+                print(f"⚠️ Erreur API Azure ML pour heatmap: {response.status_code} - {response.text}")
+                return None
                 
         except Exception as e:
-            print(f"❌ Erreur lors de la génération de heatmap: {str(e)}")
+            print(f"⚠️ Erreur lors de la génération de heatmap: {str(e)}")
             return None
     
-    def _generate_simulated_scores(self, predicted_category: str, text_description: str) -> Dict[str, float]:
-        """Générer des scores simulés pour toutes les catégories"""
-        try:
-            # Catégories disponibles
-            categories = [
-                'Baby Care', 'Beauty and Personal Care', 'Computers',
-                'Home Decor & Festive Needs', 'Home Furnishing',
-                'Kitchen & Dining', 'Watches'
-            ]
-            
-            # Règles basées sur les mots-clés
-            category_keywords = {
-                'Baby Care': ['baby', 'enfant', 'bébé', 'nourrisson', 'couche', 'jouet', 'kids', 'child', 'toddler', 'infant', 'stroller', 'pram'],
-                'Beauty and Personal Care': ['beauté', 'cosmétique', 'soin', 'shampooing', 'crème', 'maquillage', 'beauty', 'care', 'skin', 'hair', 'makeup', 'lotion', 'serum', 'moisturizer'],
-                'Computers': ['ordinateur', 'laptop', 'pc', 'computer', 'écran', 'clavier', 'desktop', 'monitor', 'keyboard', 'mouse', 'gaming', 'graphics', 'processor'],
-                'Home Decor & Festive Needs': ['déco', 'décoration', 'fête', 'festif', 'ornement', 'decor', 'decoration', 'ornament', 'festive', 'wall', 'art', 'frame'],
-                'Home Furnishing': ['meuble', 'furniture', 'canapé', 'table', 'chaise', 'lit', 'sofa', 'chair', 'bed', 'table', 'furniture', 'couch', 'dining'],
-                'Kitchen & Dining': ['cuisine', 'kitchen', 'vaisselle', 'casserole', 'four', 'réfrigérateur', 'cookware', 'dining', 'plate', 'bowl', 'utensil', 'appliance'],
-                'Watches': ['montre', 'watch', 'horloge', 'chronomètre', 'bracelet', 'sapphero', 'watches', 'timepiece', 'clock', 'stainless', 'steel', 'quartz', 'water', 'resistant', 'analog', 'digital', 'wrist']
-            }
-            
-            combined_text = text_description.lower()
-            scores = {}
-            
-            for category in categories:
-                if category == predicted_category:
-                    # Score élevé pour la catégorie prédite
-                    scores[category] = 0.85 + (hash(text_description) % 10) / 100  # Score entre 0.85 et 0.94
-                else:
-                    # Scores plus faibles pour les autres catégories
-                    keywords = category_keywords.get(category, [])
-                    matches = sum(1 for keyword in keywords if keyword in combined_text)
-                    base_score = matches / max(len(keywords), 1) * 0.3  # Score max 0.3 pour les autres
-                    scores[category] = min(0.4, base_score + (hash(category + text_description) % 20) / 100)
-            
-            return scores
-            
-        except Exception as e:
-            # Fallback simple
-            return {predicted_category: 0.9} if predicted_category else {}
-    
-    def _generate_simulated_heatmap(self, image: Image.Image, text_description: str) -> Dict[str, Any]:
-        """Générer une heatmap simulée exactement comme dans le notebook CLIP"""
-        try:
-            import numpy as np
-            from scipy.interpolate import griddata
-            from PIL import ImageEnhance
-            
-            # Obtenir les dimensions de l'image
-            img_width, img_height = image.size
-            
-            # Améliorer l'image comme dans le notebook
-            img_bw = image.convert('L')
-            enhancer = ImageEnhance.Contrast(img_bw)
-            img_bw = enhancer.enhance(1.5)
-            img_bw_array = np.array(img_bw)
-            
-            # Utiliser exactement la même approche que le notebook : patch_size=128, step=patch_size
-            patch_size = 128
-            step = patch_size
-            
-            # Créer les patches et positions exactement comme dans le notebook
-            patches = []
-            positions = []
-            
-            for y in range(0, img_height, step):
-                for x in range(0, img_width, step):
-                    patch = image.crop((x, y, min(x+patch_size, img_width), min(y+patch_size, img_height)))
-                    if patch.size[0] > 0 and patch.size[1] > 0:
-                        patch = patch.convert('RGB')
-                        patch = patch.resize((224, 224), Image.LANCZOS)
-                        patches.append(patch)
-                        # Stocker les positions comme dans le notebook : (x, y, x2, y2)
-                        positions.append((x, y, min(x+patch_size, img_width), min(y+patch_size, img_height)))
-            
-            # Simuler exactement comme dans le notebook : attention_scores = (patch_features @ text_features.T)
-            # Dans le notebook, ils utilisent de vrais scores CLIP, ici on simule de manière réaliste
-            keywords = self._extract_keywords_from_text(text_description)
-            
-            # Simuler des scores d'attention pour chaque patch (comme patch_features @ text_features.T)
-            # Dans le notebook, attention_scores a la forme (n_patches, n_keywords)
-            n_patches = len(positions)
-            n_keywords = len(keywords)
-            
-            # Créer une matrice de scores d'attention (n_patches, n_keywords)
-            attention_scores = np.zeros((n_patches, n_keywords))
-            
-            # Créer des zones d'attention plus réalistes basées sur la structure de l'image
-            for i, (x, y, x2, y2) in enumerate(positions):
-                # Utiliser le centre du patch comme dans le notebook
-                center_x, center_y = (x + x2) // 2, (y + y2) // 2
-                
-                # Score de base basé sur la position du patch (plus réaliste)
-                img_center_x, img_center_y = img_width // 2, img_height // 2
-                distance_from_center = np.sqrt((center_x - img_center_x)**2 + (center_y - img_center_y)**2)
-                max_distance = np.sqrt(img_center_x**2 + img_center_y**2)
-                
-                # Score de position avec décroissance exponentielle (plus réaliste)
-                position_score = np.exp(-distance_from_center / (max_distance * 0.3))
-                
-                # Pour chaque mot-clé, calculer un score d'attention
-                for j, keyword in enumerate(keywords):
-                    # Score de base pour ce patch
-                    base_score = position_score
-                    
-                    # Bonus si le mot-clé est pertinent pour ce patch
-                    keyword_bonus = 0.0
-                    if keyword.lower() in text_description.lower():
-                        # Simuler que certains patches sont plus pertinents pour certains mots-clés
-                        # Utiliser une distribution plus réaliste
-                        keyword_bonus = np.random.beta(2, 5) * 0.4  # Distribution biaisée vers les valeurs faibles
-                    
-                    # Score final pour ce patch et ce mot-clé
-                    attention_scores[i, j] = base_score + keyword_bonus
-            
-            # Normaliser les scores comme dans le notebook
-            attention_scores = (attention_scores - attention_scores.min()) / (attention_scores.max() - attention_scores.min())
-            
-            # Utiliser exactement la même interpolation que le notebook
-            # Dans le notebook : smooth_heatmap = griddata(points, attention_scores.mean(axis=1), (grid_x, grid_y), method='cubic', fill_value=0)
-            # Convertir les positions (x, y, x2, y2) en (x_pos, y_pos) comme dans le notebook
-            points = np.array([[(x + x2) // 2, (y + y2) // 2] for x, y, x2, y2 in positions])
-            grid_x, grid_y = np.mgrid[0:img_width:complex(0, img_width), 0:img_height:complex(0, img_height)]
-            smooth_heatmap = griddata(points, attention_scores.mean(axis=1), (grid_x, grid_y), method='cubic', fill_value=0)
-            smooth_heatmap = (smooth_heatmap - smooth_heatmap.min()) / (smooth_heatmap.max() - smooth_heatmap.min())
-            
-            # NE PAS inverser les valeurs - le notebook utilise les valeurs directement
-            # Les zones d'attention élevée sont déjà en rouge/orange avec cmap='inferno'
-            
-            return {
-                'heatmap': smooth_heatmap,
-                'keywords': keywords[:5]
-            }
-            
-        except Exception as e:
-            print(f"❌ Erreur génération heatmap simulée: {e}")
-            # Fallback simple
-            import numpy as np
-            return {
-                'heatmap': np.random.rand(100, 100),
-                'keywords': ['product', 'item', 'object']
-            }
-    
     def _predict_simulated(self, image: Image.Image, text_description: str) -> Dict[str, Any]:
-        """Prédiction simulée intelligente (fallback)"""
+        """Prédiction simulée intelligente (optimisée pour plan gratuit)"""
         try:
             # Simulation d'une prédiction basée sur des règles intelligentes
             combined_text = text_description.lower()
@@ -461,13 +361,13 @@ class AzureMLClient:
                 'predicted_category': predicted_category,
                 'confidence': confidence,
                 'category_scores': scores,
-                'source': 'simulated_fallback'
+                'source': 'demo_optimized'
             }
         except Exception as e:
             return {
                 'success': False,
-                'error': f'Erreur lors de la prédiction simulée: {str(e)}',
-                'source': 'simulated_fallback'
+                'error': f'Erreur lors de la prédiction de démonstration: {str(e)}',
+                'source': 'demo'
             }
     
     def get_service_status(self) -> Dict[str, Any]:
@@ -475,7 +375,7 @@ class AzureMLClient:
         if self.use_simulated:
             return {
                 'status': 'simulated',
-                'message': 'Utilisation du modèle de fallback'
+                'message': 'Utilisation du modèle simulé'
             }
         
         try:
