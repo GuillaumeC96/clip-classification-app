@@ -322,15 +322,47 @@ class AzureMLClient:
             keywords = self._extract_keywords_like_notebook(processed_text)
             
             # Définir les 7 catégories principales du dataset et leurs mots-clés caractéristiques
+            # Amélioration : mots-clés plus spécifiques et pondérés
             category_keywords = {
-                'Home Furnishing': ['furniture', 'furnishing', 'home', 'house', 'sofa', 'chair', 'table', 'bed', 'wardrobe', 'cabinet', 'shelf', 'desk', 'lamp', 'light', 'couch', 'dining', 'living', 'room', 'meuble', 'maison', 'canapé', 'chaise', 'table', 'lit', 'armoire'],
-                'Baby Care': ['baby', 'infant', 'child', 'toddler', 'kids', 'children', 'diaper', 'bottle', 'feeding', 'stroller', 'carriage', 'crib', 'cradle', 'toys', 'play', 'nursery', 'bébé', 'enfant', 'couche', 'biberon', 'poussette', 'berceau', 'jouet'],
-                'Watches': ['watch', 'montre', 'horloge', 'time', 'timepiece', 'clock', 'digital', 'analog', 'chronograph', 'waterproof', 'stainless', 'steel', 'leather', 'band', 'bracelet', 'dial', 'crown', 'quartz', 'automatic', 'mechanical', 'wrist', 'smartwatch'],
-                'Home Decor & Festive Needs': ['decor', 'decoration', 'festive', 'celebration', 'party', 'ornament', 'vase', 'candle', 'frame', 'picture', 'art', 'sculpture', 'statue', 'festival', 'holiday', 'christmas', 'décor', 'décoration', 'fête', 'ornement', 'vase', 'bougie', 'cadre'],
-                'Kitchen & Dining': ['kitchen', 'dining', 'cook', 'cooking', 'bake', 'baking', 'utensil', 'knife', 'fork', 'spoon', 'plate', 'bowl', 'cup', 'mug', 'glass', 'pot', 'pan', 'microwave', 'oven', 'stove', 'cuisine', 'manger', 'cuisiner', 'ustensile', 'couteau', 'fourchette', 'cuillère', 'assiette'],
-                'Beauty and Personal Care': ['beauty', 'cosmetic', 'makeup', 'skincare', 'hair', 'shampoo', 'conditioner', 'soap', 'cream', 'lotion', 'perfume', 'fragrance', 'lipstick', 'mascara', 'foundation', 'powder', 'brush', 'mirror', 'beauté', 'cosmétique', 'maquillage', 'soin', 'cheveux', 'shampoing', 'savon', 'crème', 'parfum'],
-                'Computers': ['computer', 'laptop', 'notebook', 'pc', 'desktop', 'monitor', 'keyboard', 'mouse', 'cpu', 'processor', 'ram', 'storage', 'ssd', 'hdd', 'graphics', 'gpu', 'motherboard', 'memory', 'hardware', 'software', 'ordinateur', 'portable', 'écran', 'clavier', 'souris', 'processeur', 'mémoire']
+                'Home Furnishing': ['furniture', 'furnishing', 'home', 'house', 'sofa', 'chair', 'table', 'bed', 'wardrobe', 'cabinet', 'shelf', 'desk', 'lamp', 'light', 'couch', 'dining', 'living', 'room', 'meuble', 'maison', 'canapé', 'chaise', 'table', 'lit', 'armoire', 'fauteuil', 'bureau', 'étagère'],
+                'Baby Care': ['baby', 'infant', 'child', 'toddler', 'kids', 'children', 'diaper', 'bottle', 'feeding', 'stroller', 'carriage', 'crib', 'cradle', 'toys', 'play', 'nursery', 'bébé', 'enfant', 'couche', 'biberon', 'poussette', 'berceau', 'jouet', 'nourrisson', 'siège', 'auto'],
+                'Watches': ['watch', 'montre', 'horloge', 'time', 'timepiece', 'clock', 'digital', 'analog', 'chronograph', 'waterproof', 'stainless', 'steel', 'leather', 'band', 'bracelet', 'dial', 'crown', 'quartz', 'automatic', 'mechanical', 'wrist', 'smartwatch', 'chrono', 'résistant', 'eau'],
+                'Home Decor & Festive Needs': ['decor', 'decoration', 'festive', 'celebration', 'party', 'ornament', 'vase', 'candle', 'frame', 'picture', 'art', 'sculpture', 'statue', 'festival', 'holiday', 'christmas', 'décor', 'décoration', 'fête', 'ornement', 'vase', 'bougie', 'cadre', 'tableau', 'sculpture', 'statue'],
+                'Kitchen & Dining': ['kitchen', 'dining', 'cook', 'cooking', 'bake', 'baking', 'utensil', 'knife', 'fork', 'spoon', 'plate', 'bowl', 'cup', 'mug', 'glass', 'pot', 'pan', 'microwave', 'oven', 'stove', 'cuisine', 'manger', 'cuisiner', 'ustensile', 'couteau', 'fourchette', 'cuillère', 'assiette', 'casserole', 'poêle', 'four', 'micro-ondes'],
+                'Beauty and Personal Care': ['beauty', 'cosmetic', 'makeup', 'skincare', 'hair', 'shampoo', 'conditioner', 'soap', 'cream', 'lotion', 'perfume', 'fragrance', 'lipstick', 'mascara', 'foundation', 'powder', 'brush', 'mirror', 'beauté', 'cosmétique', 'maquillage', 'soin', 'cheveux', 'shampoing', 'savon', 'crème', 'parfum', 'rouge', 'à', 'lèvres', 'mascara', 'fond', 'teint'],
+                'Computers': ['computer', 'laptop', 'notebook', 'pc', 'desktop', 'monitor', 'mouse', 'cpu', 'processor', 'ram', 'storage', 'ssd', 'hdd', 'graphics', 'gpu', 'motherboard', 'memory', 'hardware', 'software', 'ordinateur', 'portable', 'écran', 'souris', 'processeur', 'mémoire', 'intel', 'amd', 'nvidia', 'windows', 'mac', 'macbook']
             }
+            
+            # Mots-clés spécifiques pour les claviers (exclusion de Computers)
+            keyboard_keywords = ['clavier', 'keyboard', 'mécanique', 'gaming', 'switches', 'rétroéclairage', 'rgb', 'qwerty', 'azerty', 'wireless', 'bluetooth', 'usb', 'logitech', 'corsair', 'razer', 'steelseries']
+            
+            # Vérifier si c'est un clavier
+            is_keyboard = any(keyword.lower() in processed_text.lower() for keyword in keyboard_keywords)
+            
+            if is_keyboard:
+                # Pour les claviers, utiliser une logique spéciale
+                # Les claviers peuvent être dans Computers mais avec une confiance plus faible
+                # ou dans d'autres catégories selon le contexte
+                if any(word in processed_text.lower() for word in ['gaming', 'jeu', 'rgb', 'mécanique']):
+                    # Clavier gaming -> Computers mais avec confiance modérée
+                    return {
+                        'success': True,
+                        'predicted_category': 'Computers',
+                        'confidence': 0.35,  # Confiance modérée
+                        'source': 'local_keywords_analysis',
+                        'keywords_found': keywords,
+                        'category_scores': {'Computers': 0.35}
+                    }
+                else:
+                    # Clavier standard -> Computers avec confiance faible
+                    return {
+                        'success': True,
+                        'predicted_category': 'Computers',
+                        'confidence': 0.25,  # Confiance faible
+                        'source': 'local_keywords_analysis',
+                        'keywords_found': keywords,
+                        'category_scores': {'Computers': 0.25}
+                    }
             
             # Calculer les scores pour chaque catégorie
             category_scores = {}
@@ -418,7 +450,7 @@ class AzureMLClient:
                 
                 # Vérifier si c'est une réponse simulée
                 if result.get('source') == 'azure_onnx_simulation':
-                    # L'endpoint est en mode simulation, utiliser la prédiction locale
+                    # L'endpoint est en mode simulation, utiliser la prédiction locale améliorée
                     st.info("ℹ️ Utilisation de l'analyse intelligente des mots-clés (identique au notebook)")
                     return self._predict_local_keywords(brand, product_name, description, specifications)
                 else:
