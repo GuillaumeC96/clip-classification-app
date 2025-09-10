@@ -7,6 +7,7 @@ import streamlit as st
 from PIL import Image
 import numpy as np
 import json
+import pandas as pd
 from azure_client import get_azure_client
 
 # Importer le module d'accessibilité
