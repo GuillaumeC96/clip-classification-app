@@ -388,6 +388,9 @@ class AzureMLClient:
             # Normaliser exactement comme dans le notebook
             smooth_heatmap = (smooth_heatmap - smooth_heatmap.min()) / (smooth_heatmap.max() - smooth_heatmap.min())
             
+            # Inverser les valeurs pour que les zones d'attention élevée soient en rouge/orange (comme dans le notebook)
+            smooth_heatmap = 1.0 - smooth_heatmap
+            
             return {
                 'heatmap': smooth_heatmap,
                 'keywords': keywords[:5]
