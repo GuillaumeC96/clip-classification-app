@@ -186,8 +186,7 @@ if st.button("🔮 Prédire la catégorie", type="primary"):
     
     with st.spinner("🔄 Analyse en cours..."):
         # Prédiction avec Azure ML
-        text_description = f"{brand} {product_name} {description} {specifications}"
-        result = azure_client.predict_category(image, text_description)
+        result = azure_client.predict_category(image, brand, product_name, description, specifications)
         
         # Affichage des résultats
         if 'predicted_category' in result:

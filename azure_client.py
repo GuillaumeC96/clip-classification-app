@@ -158,26 +158,40 @@ class AzureMLClient:
             print(f"⚠️ Erreur prétraitement image: {str(e)}")
             return image
     
-    def _preprocess_text_like_notebook(self, text_description: str, product_keywords: str = None) -> str:
-        """Prétraitement du texte identique au notebook (clean_text + extract_keywords)"""
+    def _preprocess_text_like_notebook(self, brand: str, product_name: str, description: str, specifications: str) -> str:
+        """Prétraitement du texte identique au notebook (combined_text format)"""
         try:
-            # Combiner description et mots-clés
-            combined_text = f"{text_description}"
-            if product_keywords:
-                combined_text += f" {product_keywords}"
+            # Nettoyer les spécifications comme dans le notebook
+            cleaned_specs = self._process_specs_like_notebook(specifications)
+            
+            # Créer le combined_text identique au notebook
+            combined_text = (
+                product_name.lower() + '. ' +
+                (brand.lower() if brand else '') + '. ' +
+                cleaned_specs.lower() + '. ' +
+                description.lower()
+            )
             
             # Appliquer le nettoyage identique au notebook
-            cleaned_text = self._clean_text_like_notebook(combined_text)
+            processed_text = self._clean_text_like_notebook(combined_text)
             
             # Extraire les mots-clés comme dans le notebook
-            keywords = self._extract_keywords_like_notebook(cleaned_text)
+            keywords = self._extract_keywords_like_notebook(processed_text)
             
             # Retourner les mots-clés séparés par des virgules (comme dans le notebook)
             return ", ".join(keywords) if keywords else "no_keywords_found"
             
         except Exception as e:
             print(f"⚠️ Erreur prétraitement texte: {str(e)}")
-            return text_description
+            return f"{brand} {product_name} {description} {specifications}"
+    
+    def _process_specs_like_notebook(self, spec_string: str) -> str:
+        """Nettoyage des spécifications identique au notebook (process_specs function)"""
+        if not isinstance(spec_string, str):
+            return ""
+        # Extraire les paires key=>value du format Ruby/JSON
+        matches = re.findall(r'\{"key"=>"(.*?)", "value"=>"(.*?)"\}', spec_string)
+        return ". ".join(f"{k.strip().lower()} {v.strip().lower()}" for k, v in matches if k.strip() and v.strip())
     
     def _clean_text_like_notebook(self, text: str) -> str:
         """Nettoyage du texte identique au notebook (clean_text function)"""
@@ -357,24 +371,28 @@ class AzureMLClient:
         keyword_counts = Counter(keywords)
         return [word for word, count in keyword_counts.most_common(top_n)]
     
-    def predict_category(self, image: Image.Image, text_description: str, product_keywords: str = None) -> Dict[str, Any]:
+    def predict_category(self, image: Image.Image, brand: str, product_name: str, description: str, specifications: str) -> Dict[str, Any]:
         """
         Prédire la catégorie d'un produit (LOGIQUE IDENTIQUE AU NOTEBOOK)
         
         Args:
             image: Image PIL du produit
-            text_description: Description textuelle du produit
-            product_keywords: Mots-clés du produit depuis le CSV
+            brand: Marque du produit
+            product_name: Nom du produit
+            description: Description du produit
+            specifications: Spécifications techniques
             
         Returns:
             Dict contenant les résultats de prédiction
         """
         if self.use_simulated:
+            # Combiner les champs pour le mode simulé
+            text_description = f"{brand} {product_name} {description} {specifications}"
             return self._predict_simulated(image, text_description)
         else:
-            return self._predict_azure(image, text_description, product_keywords)
+            return self._predict_azure(image, brand, product_name, description, specifications)
     
-    def _predict_azure(self, image: Image.Image, text_description: str, product_keywords: str = None) -> Dict[str, Any]:
+    def _predict_azure(self, image: Image.Image, brand: str, product_name: str, description: str, specifications: str) -> Dict[str, Any]:
         """Prédiction via l'API Azure ML avec prétraitement identique au notebook"""
         try:
             # PRÉTRAITEMENT IDENTIQUE AU NOTEBOOK
@@ -384,13 +402,12 @@ class AzureMLClient:
             image_base64 = self.encode_image_to_base64(processed_image)
             
             # 2. Prétraitement du texte (comme dans clean_text + extract_keywords)
-            processed_text = self._preprocess_text_like_notebook(text_description, product_keywords)
+            processed_text = self._preprocess_text_like_notebook(brand, product_name, description, specifications)
             
             # Préparer les données avec le prétraitement identique au notebook
             data = {
                 "image": image_base64,
-                "text": processed_text,  # Texte prétraité comme dans le notebook
-                "product_keywords": product_keywords
+                "text": processed_text  # Texte prétraité comme dans le notebook
             }
             
             # Headers pour l'authentification
