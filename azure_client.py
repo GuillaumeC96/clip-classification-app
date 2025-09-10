@@ -339,7 +339,7 @@ class AzureMLClient:
                 keywords.extend(['product', 'item', 'object'])
             
             # Créer une grille de points comme dans le notebook
-            resolution = 50  # Même résolution que le notebook
+            resolution = 30  # Réduction pour performance mais garder la qualité
             x = np.linspace(0, img_width, resolution, dtype=int)
             y = np.linspace(0, img_height, resolution, dtype=int)
             xx, yy = np.meshgrid(x, y)
@@ -368,8 +368,8 @@ class AzureMLClient:
                         if keyword in text_description.lower():
                             keyword_bonus += 0.1
                     
-                    # Variation aléatoire pour simuler l'attention CLIP
-                    variation = np.random.normal(0, 0.05)
+                    # Variation aléatoire pour simuler l'attention CLIP (plus lisse)
+                    variation = np.random.normal(0, 0.02)  # Réduire la variation pour plus de lissage
                     score = np.clip(base_score + keyword_bonus + variation, 0, 1)
                     
                     attention_scores.append(score)
@@ -378,9 +378,11 @@ class AzureMLClient:
             attention_scores = np.array(attention_scores)
             
             # Créer une grille fine pour l'interpolation (exactement comme dans le notebook)
+            # Utiliser la même méthode que le notebook avec complex()
             grid_x, grid_y = np.mgrid[0:img_width:complex(0, img_width), 0:img_height:complex(0, img_height)]
             
             # Interpolation pour créer une heatmap lisse (comme dans le notebook)
+            # Utiliser la même méthode que le notebook
             smooth_heatmap = griddata(positions, attention_scores, (grid_x, grid_y), method='cubic', fill_value=0)
             
             # Normaliser exactement comme dans le notebook
