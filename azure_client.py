@@ -346,28 +346,30 @@ class AzureMLClient:
         try:
             import numpy as np
             
-            # Créer une heatmap simulée basée sur la taille de l'image
-            width, height = image.size
-            
-            # Créer une heatmap avec des zones d'attention simulées
-            heatmap = np.random.rand(height, width) * 0.3  # Base faible
-            
-            # Ajouter des zones d'attention plus fortes au centre
-            center_y, center_x = height // 2, width // 2
-            y, x = np.ogrid[:height, :width]
+            # Créer une heatmap de taille fixe (plus petite pour un meilleur affichage)
+            heatmap_size = 64  # 64x64 pixels
+            heatmap = np.zeros((heatmap_size, heatmap_size))
             
             # Zone centrale avec plus d'attention
-            mask_center = ((x - center_x)**2 + (y - center_y)**2) < (min(width, height) // 4)**2
-            heatmap[mask_center] += 0.4
+            center = heatmap_size // 2
+            y, x = np.ogrid[:heatmap_size, :heatmap_size]
             
-            # Ajouter des zones aléatoires d'attention
-            for _ in range(3):
-                rand_y = np.random.randint(0, height)
-                rand_x = np.random.randint(0, width)
-                size = np.random.randint(20, min(width, height) // 3)
-                
-                y_mask = (y - rand_y)**2 + (x - rand_x)**2 < size**2
-                heatmap[y_mask] += 0.2
+            # Zone centrale circulaire
+            mask_center = ((x - center)**2 + (y - center)**2) < (heatmap_size // 4)**2
+            heatmap[mask_center] = 0.8
+            
+            # Ajouter des zones d'attention secondaires
+            # Zone en haut à droite
+            mask_tr = ((x - center*1.2)**2 + (y - center*0.8)**2) < (heatmap_size // 8)**2
+            heatmap[mask_tr] = 0.6
+            
+            # Zone en bas à gauche
+            mask_bl = ((x - center*0.8)**2 + (y - center*1.2)**2) < (heatmap_size // 8)**2
+            heatmap[mask_bl] = 0.4
+            
+            # Ajouter du bruit pour rendre plus réaliste
+            noise = np.random.rand(heatmap_size, heatmap_size) * 0.1
+            heatmap = heatmap + noise
             
             # Normaliser entre 0 et 1
             heatmap = np.clip(heatmap, 0, 1)
@@ -375,7 +377,7 @@ class AzureMLClient:
             # Extraire des mots-clés de la description
             keywords = []
             words = text_description.lower().split()
-            important_words = ['watch', 'montre', 'analog', 'digital', 'steel', 'stainless', 'quartz', 'water', 'resistant']
+            important_words = ['watch', 'montre', 'analog', 'digital', 'steel', 'stainless', 'quartz', 'water', 'resistant', 'timepiece', 'wrist', 'accessory']
             
             for word in words:
                 if word in important_words and word not in keywords:
@@ -391,6 +393,7 @@ class AzureMLClient:
             }
             
         except Exception as e:
+            print(f"❌ Erreur génération heatmap simulée: {e}")
             return None
     
     def _predict_simulated(self, image: Image.Image, text_description: str) -> Dict[str, Any]:
