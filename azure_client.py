@@ -56,7 +56,7 @@ class AzureMLClient:
             st.success("✅ Client Azure ML initialisé - Modèle PyTorch finetuné")
             st.info(f"🔗 Endpoint: {self.endpoint_url}")
             st.info(f"🎯 Source: {self.config_source}")
-def _preprocess_image_like_notebook(self, image: Image.Image) -> Image.Image:
+    def _preprocess_image_like_notebook(self, image: Image.Image) -> Image.Image:
         """
         Prétraitement de l'image identique au notebook (extract_image_features)
         
