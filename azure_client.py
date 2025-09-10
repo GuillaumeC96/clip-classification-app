@@ -321,23 +321,15 @@ class AzureMLClient:
             # Extraire les mots-clés
             keywords = self._extract_keywords_like_notebook(processed_text)
             
-            # Définir les catégories et leurs mots-clés caractéristiques
+            # Définir les 7 catégories principales du dataset et leurs mots-clés caractéristiques
             category_keywords = {
-                'Watches': ['watch', 'montre', 'horloge', 'time', 'digital', 'analog', 'chronograph', 'waterproof', 'stainless', 'steel', 'leather', 'band', 'bracelet', 'dial', 'crown', 'quartz', 'automatic', 'mechanical'],
-                'Smartphones': ['phone', 'smartphone', 'mobile', 'android', 'ios', 'iphone', 'samsung', 'galaxy', 'screen', 'display', 'camera', 'battery', 'storage', 'ram', 'processor', 'touch', 'wireless', 'bluetooth', 'wifi', 'gps'],
-                'Laptops': ['laptop', 'notebook', 'computer', 'pc', 'macbook', 'dell', 'hp', 'lenovo', 'asus', 'acer', 'intel', 'amd', 'processor', 'cpu', 'ram', 'storage', 'ssd', 'hdd', 'graphics', 'gpu', 'keyboard', 'trackpad', 'screen', 'display'],
-                'Tablets': ['tablet', 'ipad', 'android', 'touch', 'screen', 'display', 'wifi', 'bluetooth', 'camera', 'battery', 'storage', 'ram', 'processor'],
-                'Headphones': ['headphone', 'headset', 'earphone', 'earbud', 'audio', 'sound', 'music', 'wireless', 'bluetooth', 'noise', 'cancelling', 'bass', 'microphone', 'mic'],
-                'Cameras': ['camera', 'photo', 'photography', 'lens', 'zoom', 'megapixel', 'mp', 'dslr', 'mirrorless', 'digital', 'video', 'recording', 'battery', 'memory', 'card'],
-                'Gaming': ['gaming', 'game', 'controller', 'console', 'playstation', 'xbox', 'nintendo', 'pc', 'keyboard', 'mouse', 'headset', 'graphics', 'fps', 'rgb'],
-                'Home & Kitchen': ['home', 'kitchen', 'appliance', 'cooking', 'bake', 'microwave', 'oven', 'refrigerator', 'dishwasher', 'coffee', 'maker', 'blender', 'mixer'],
-                'Sports & Outdoors': ['sport', 'fitness', 'exercise', 'gym', 'running', 'cycling', 'swimming', 'outdoor', 'camping', 'hiking', 'bike', 'bicycle', 'shoes', 'clothing'],
-                'Beauty & Personal Care': ['beauty', 'cosmetic', 'makeup', 'skincare', 'hair', 'shampoo', 'conditioner', 'soap', 'cream', 'lotion', 'perfume', 'fragrance'],
-                'Clothing & Accessories': ['clothing', 'clothes', 'shirt', 'dress', 'pants', 'jeans', 'shoes', 'boots', 'sneakers', 'jacket', 'coat', 'accessory', 'bag', 'purse', 'wallet'],
-                'Books & Media': ['book', 'novel', 'magazine', 'dvd', 'cd', 'music', 'movie', 'film', 'documentary', 'educational', 'fiction', 'non-fiction'],
-                'Toys & Games': ['toy', 'game', 'puzzle', 'doll', 'action', 'figure', 'board', 'card', 'educational', 'children', 'kids', 'baby'],
-                'Automotive': ['car', 'automotive', 'vehicle', 'tire', 'battery', 'oil', 'filter', 'brake', 'engine', 'transmission', 'accessory', 'part'],
-                'Health & Wellness': ['health', 'wellness', 'medical', 'supplement', 'vitamin', 'fitness', 'monitor', 'scale', 'thermometer', 'blood', 'pressure']
+                'Home Furnishing': ['furniture', 'furnishing', 'home', 'house', 'sofa', 'chair', 'table', 'bed', 'wardrobe', 'cabinet', 'shelf', 'desk', 'lamp', 'light', 'couch', 'dining', 'living', 'room', 'meuble', 'maison', 'canapé', 'chaise', 'table', 'lit', 'armoire'],
+                'Baby Care': ['baby', 'infant', 'child', 'toddler', 'kids', 'children', 'diaper', 'bottle', 'feeding', 'stroller', 'carriage', 'crib', 'cradle', 'toys', 'play', 'nursery', 'bébé', 'enfant', 'couche', 'biberon', 'poussette', 'berceau', 'jouet'],
+                'Watches': ['watch', 'montre', 'horloge', 'time', 'timepiece', 'clock', 'digital', 'analog', 'chronograph', 'waterproof', 'stainless', 'steel', 'leather', 'band', 'bracelet', 'dial', 'crown', 'quartz', 'automatic', 'mechanical', 'wrist', 'smartwatch'],
+                'Home Decor & Festive Needs': ['decor', 'decoration', 'festive', 'celebration', 'party', 'ornament', 'vase', 'candle', 'frame', 'picture', 'art', 'sculpture', 'statue', 'festival', 'holiday', 'christmas', 'décor', 'décoration', 'fête', 'ornement', 'vase', 'bougie', 'cadre'],
+                'Kitchen & Dining': ['kitchen', 'dining', 'cook', 'cooking', 'bake', 'baking', 'utensil', 'knife', 'fork', 'spoon', 'plate', 'bowl', 'cup', 'mug', 'glass', 'pot', 'pan', 'microwave', 'oven', 'stove', 'cuisine', 'manger', 'cuisiner', 'ustensile', 'couteau', 'fourchette', 'cuillère', 'assiette'],
+                'Beauty and Personal Care': ['beauty', 'cosmetic', 'makeup', 'skincare', 'hair', 'shampoo', 'conditioner', 'soap', 'cream', 'lotion', 'perfume', 'fragrance', 'lipstick', 'mascara', 'foundation', 'powder', 'brush', 'mirror', 'beauté', 'cosmétique', 'maquillage', 'soin', 'cheveux', 'shampoing', 'savon', 'crème', 'parfum'],
+                'Computers': ['computer', 'laptop', 'notebook', 'pc', 'desktop', 'monitor', 'keyboard', 'mouse', 'cpu', 'processor', 'ram', 'storage', 'ssd', 'hdd', 'graphics', 'gpu', 'motherboard', 'memory', 'hardware', 'software', 'ordinateur', 'portable', 'écran', 'clavier', 'souris', 'processeur', 'mémoire']
             }
             
             # Calculer les scores pour chaque catégorie
