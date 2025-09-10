@@ -27,24 +27,24 @@ class AzureMLClient:
         Args:
             show_warning (bool): Afficher les messages de configuration
         """
-        # Configuration pour Streamlit Cloud - utiliser les secrets
+        # Configuration pour Azure ML Cloud - utiliser les secrets Streamlit
         try:
-            # Essayer de lire les secrets Streamlit Cloud
+            # Lire la configuration depuis les secrets Streamlit Cloud
             if hasattr(st, 'secrets') and 'azure_ml' in st.secrets:
                 self.endpoint_url = st.secrets.azure_ml.endpoint_url
                 self.api_key = st.secrets.azure_ml.api_key
                 self.config_source = 'azure_ml_pytorch_cloud'
                 print("✅ Configuration Azure ML chargée depuis Streamlit Cloud secrets")
             else:
-                # Fallback vers la configuration locale
-                self.endpoint_url = "http://localhost:5000/score"
-                self.api_key = "dummy_key"
-                self.config_source = 'azure_ml_pytorch_local'
-                print("⚠️ Utilisation de la configuration locale (pas de secrets Streamlit Cloud)")
+                # Configuration par défaut Azure ML (pas de localhost)
+                self.endpoint_url = "https://clip-pytorch-endpoint.azureml.inference.net/score"
+                self.api_key = "your-api-key"
+                self.config_source = 'azure_ml_pytorch_default'
+                print("⚠️ Utilisation de la configuration Azure ML par défaut")
         except Exception as e:
-            # Configuration par défaut
-            self.endpoint_url = "http://localhost:5000/score"
-            self.api_key = "dummy_key"
+            # Configuration Azure ML par défaut
+            self.endpoint_url = "https://clip-pytorch-endpoint.azureml.inference.net/score"
+            self.api_key = "your-api-key"
             self.config_source = 'azure_ml_pytorch_default'
             print(f"⚠️ Erreur de configuration: {str(e)}")
         

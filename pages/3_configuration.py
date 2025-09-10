@@ -36,11 +36,11 @@ st.markdown("---")
 # Section 1: Statut actuel de la configuration
 st.header("📊 Statut actuel de la configuration")
 
-# Configuration de production
+# Configuration de production Azure ML
 config = {
-    'endpoint_url': "http://localhost:5000/score",
-    'api_key': "dummy_key",
-    'source': 'azure_ml_production'
+    'endpoint_url': "https://clip-pytorch-endpoint.azureml.inference.net/score",
+    'api_key': "your-api-key",
+    'source': 'azure_ml_pytorch_cloud'
 }
 
 col1, col2 = st.columns(2)
@@ -105,7 +105,7 @@ if is_cloud:
     4. **Ajoutez les secrets suivants :**
     
     ```toml
-    AZURE_ML_ENDPOINT_URL = "http://localhost:5000/score"
+    AZURE_ML_ENDPOINT_URL = "https://clip-pytorch-endpoint.azureml.inference.net/score"
     AZURE_ML_API_KEY = "dummy_key"
     ```
     
@@ -126,7 +126,7 @@ st.header("🔗 Informations sur l'endpoint")
 st.markdown("""
 ### 📡 Endpoint Azure ML PyTorch
 
-**URL:** `http://localhost:5000/score`
+**URL:** `https://clip-pytorch-endpoint.azureml.inference.net/score`
 
 **Type:** Modèle CLIP PyTorch finetuné
 
