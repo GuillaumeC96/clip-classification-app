@@ -28,7 +28,7 @@ git push -u origin main
 4. **Configuration** :
    - **Repository** : `VOTRE-USERNAME/clip-classification-app`
    - **Branch** : `main`
-   - **Main file path** : `pages/2_prediction.py`
+   - **Main file path** : `streamlit_app.py`
 5. Cliquer "Deploy!"
 
 ## ✅ **Système Entièrement Fonctionnel**
