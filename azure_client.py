@@ -6,6 +6,7 @@ import os
 import json
 import base64
 import requests
+import re
 import streamlit as st
 from PIL import Image
 import io
@@ -138,6 +139,224 @@ class AzureMLClient:
         img_bytes = buffer.getvalue()
         return base64.b64encode(img_bytes).decode('utf-8')
     
+    def _preprocess_image_like_notebook(self, image: Image.Image) -> Image.Image:
+        """Prétraitement de l'image identique au notebook (extract_image_features)"""
+        try:
+            # Convertir en RGB si nécessaire (comme dans le notebook)
+            if image.mode != 'RGB':
+                image = image.convert('RGB')
+            
+            # Redimensionner si nécessaire (comme dans le notebook)
+            max_size = 128  # Même valeur que dans le notebook
+            if max(image.size) > max_size:
+                ratio = max_size / max(image.size)
+                new_size = (int(image.size[0] * ratio), int(image.size[1] * ratio))
+                image = image.resize(new_size, Image.LANCZOS)  # Même méthode que le notebook
+            
+            return image
+        except Exception as e:
+            print(f"⚠️ Erreur prétraitement image: {str(e)}")
+            return image
+    
+    def _preprocess_text_like_notebook(self, text_description: str, product_keywords: str = None) -> str:
+        """Prétraitement du texte identique au notebook (clean_text + extract_keywords)"""
+        try:
+            # Combiner description et mots-clés
+            combined_text = f"{text_description}"
+            if product_keywords:
+                combined_text += f" {product_keywords}"
+            
+            # Appliquer le nettoyage identique au notebook
+            cleaned_text = self._clean_text_like_notebook(combined_text)
+            
+            # Extraire les mots-clés comme dans le notebook
+            keywords = self._extract_keywords_like_notebook(cleaned_text)
+            
+            # Retourner les mots-clés séparés par des virgules (comme dans le notebook)
+            return ", ".join(keywords) if keywords else "no_keywords_found"
+            
+        except Exception as e:
+            print(f"⚠️ Erreur prétraitement texte: {str(e)}")
+            return text_description
+    
+    def _clean_text_like_notebook(self, text: str) -> str:
+        """Nettoyage du texte identique au notebook (clean_text function)"""
+        if not text:
+            return ""
+        
+        # Règles de nettoyage identiques au notebook
+        all_patterns = [
+            # Ponctuation spécifique
+            (r'\(', ' ( '),
+            (r'\)', ' ) '),
+            (r'\.', ' . '),
+            (r'\!', ' ! '),
+            (r'\?', ' ? '),
+            (r'\:', ' : '),
+            (r'\,', ', '),
+            # Motifs spécifiques du domaine
+            (r'\b(\d+)\s*[-~to]?\s*(\d+)\s*(m|mth|mths|month|months?)\b', 'month'),
+            (r'\bnewborn\s*[-~to]?\s*(\d+)\s*(m|mth|months?)\b', 'month'),
+            (r'\b(nb|newborn|baby|bb|bby|babie|babies)\b', 'baby'),
+            (r'\b(diaper|diapr|nappy)\b', 'diaper'),
+            (r'\b(stroller|pram|buggy)\b', 'stroller'),
+            (r'\b(bpa\s*free|non\s*bpa)\b', 'bisphenol a free'),
+            (r'\b(\d+)\s*(oz|ounce)\b', 'ounce'),
+            (r'\b(rtx\s*\d+)\b', 'ray tracing graphics'),
+            (r'\b(gtx\s*\d+)\b', 'geforce graphics'),
+            (r'\bnvidia\b', 'nvidia'),
+            (r'\b(amd\s*radeon\s*rx\s*\d+)\b', 'amd radeon graphics'),
+            (r'\b(intel\s*(core|xeon)\s*[i\d-]+)\b', 'intel processor'),
+            (r'\b(amd\s*ryzen\s*[\d]+)\b', 'amd ryzen processor'),
+            (r'\bssd\b', 'solid state drive'),
+            (r'\bhdd\b', 'hard disk drive'),
+            (r'\bwifi\s*([0-9])\b', 'wi-fi standard'),
+            (r'\bbluetooth\s*(\d\.\d)\b', 'bluetooth version'),
+            (r'\bethernet\b', 'ethernet'),
+            (r'\bfhd\b', 'full high definition'),
+            (r'\buhd\b', 'ultra high definition'),
+            (r'\bqhd\b', 'quad high definition'),
+            (r'\boled\b', 'organic light emitting diode'),
+            (r'\bips\b', 'in-plane switching'),
+            (r'\bram\b', 'random access memory'),
+            (r'\bcpu\b', 'central processing unit'),
+            (r'\bgpu\b', 'graphics processing unit'),
+            (r'\bhdmi\b', 'high definition multimedia interface'),
+            (r'\busb\s*([a-z0-9]*)\b', 'universal serial bus'),
+            (r'\brgb\b', 'red green blue'),
+            (r'\bfridge\b', 'refrigerator'),
+            (r'\bwashing\s*machine\b', 'clothes washer'),
+            (r'\bdishwasher\b', 'dish washing machine'),
+            (r'\boven\b', 'cooking oven'),
+            (r'\bmicrowave\b', 'microwave oven'),
+            (r'\bhoover\b', 'vacuum cleaner'),
+            (r'\btumble\s*dryer\b', 'clothes dryer'),
+            (r'\b(a\+\++)\b', 'energy efficiency class'),
+            (r'\b(\d+)\s*btu\b', 'british thermal unit'),
+            (r'\bpoly\b', 'polyester'),
+            (r'\bacrylic\b', 'acrylic fiber'),
+            (r'\bnylon\b', 'nylon fiber'),
+            (r'\bspandex\b', 'spandex fiber'),
+            (r'\blycra\b', 'lycra fiber'),
+            (r'\bpvc\b', 'polyvinyl chloride'),
+            (r'\bvinyl\b', 'vinyl material'),
+            (r'\bstainless\s*steel\b', 'stainless steel'),
+            (r'\baluminum\b', 'aluminum metal'),
+            (r'\bplexiglass\b', 'acrylic glass'),
+            (r'\bpu\s*leather\b', 'polyurethane leather'),
+            (r'\bsynthetic\s*leather\b', 'synthetic leather'),
+            (r'\bfaux\s*leather\b', 'faux leather'),
+            (r'\bwaterproof\b', 'water resistant'),
+            (r'\bbreathable\b', 'air permeable'),
+            (r'\bwrinkle-free\b', 'wrinkle resistant'),
+            (r'\bSPF\b', 'sun protection factor'),
+            (r'\bUV\b', 'ultraviolet'),
+            (r'\bBB\s*cream\b', 'blemish balm cream'),
+            (r'\bCC\s*cream\b', 'color correcting cream'),
+            (r'\bHA\b', 'hyaluronic acid'),
+            (r'\bAHA\b', 'alpha hydroxy acid'),
+            (r'\bBHA\b', 'beta hydroxy acid'),
+            (r'\bPHA\b', 'polyhydroxy acid'),
+            (r'\bNMF\b', 'natural moisturizing factor'),
+            (r'\bEGF\b', 'epidermal growth factor'),
+            (r'\bVit\s*C\b', 'vitamin c'),
+            (r'\bVit\s*E\b', 'vitamin e'),
+            (r'\bVit\s*B3\b', 'niacinamide vitamin b3'),
+            (r'\bVit\s*B5\b', 'panthenol vitamin b5'),
+            (r'\bSOD\b', 'superoxide dismutase'),
+            (r'\bQ10\b', 'coenzyme q10'),
+            (r'\bFoam\s*cl\b', 'foam cleanser'),
+            (r'\bMic\s*H2O\b', 'micellar water'),
+            (r'\bToner\b', 'skin toner'),
+            (r'\bEssence\b', 'skin essence'),
+            (r'\bAmpoule\b', 'concentrated serum'),
+            (r'\bCF\b', 'cruelty free'),
+            (r'\bPF\b', 'paraben free'),
+            (r'\bSF\b', 'sulfate free'),
+            (r'\bGF\b', 'gluten free'),
+            (r'\bHF\b', 'hypoallergenic formula'),
+            (r'\bNT\b', 'non-comedogenic tested'),
+            (r'\bAM\b', 'morning'),
+            (r'\bPM\b', 'night'),
+            (r'\bBID\b', 'twice daily'),
+            (r'\bQD\b', 'once daily'),
+            (r'\bAIR\b', 'airless pump bottle'),
+            (r'\bD-C\b', 'dropper container'),
+            (r'\bT-C\b', 'tube container'),
+            (r'\bPDO\b', 'polydioxanone'),
+            (r'\bPCL\b', 'polycaprolactone'),
+            (r'\bPLLA\b', 'poly-l-lactic acid'),
+            (r'\bHIFU\b', 'high-intensity focused ultrasound'),
+            (r'\b(\d+)\s*fl\s*oz\b', 'fluid ounce'),
+            (r'\bpH\s*bal\b', 'ph balanced'),
+            (r'\b(\d+)\s*(gb|tb|mb|go|to|mo)\b', 'byte'),
+            (r'\boctet\b', 'byte'),
+            (r'\b(\d+)\s*y\b', 'year'),
+            (r'\b(\d+)\s*mth\b', 'month'),
+            (r'\b(\d+)\s*d\b', 'day'),
+            (r'\b(\d+)\s*h\b', 'hour'),
+            (r'\b(\d+)\s*min\b', 'minute'),
+            (r'\b(\d+)\s*rpm\b', 'revolution per minute'),
+            (r'\b(\d+)\s*(mw|cw|kw)\b', 'watt'),
+            (r'\b(\d+)\s*(ma|ca|ka)\b', 'ampere'),
+            (r'\b(\d+)\s*(mv|cv|kv)\b', 'volt'),
+            (r'\b(\d+)\s*(mm|cm|m|km)\b', 'meter'),
+            (r'\binch\b', 'meter'),
+            (r'\b(\d+)\s*(ml|cl|dl|l|oz|gal)\b', 'liter'),
+            (r'\b(gallon|ounce)\b', 'liter'),
+            (r'\b(\d+)\s*(mg|cg|dg|g|kg|lb)\b', 'gram'),
+            (r'\bpound\b', 'gram'),
+            (r'\b(\d+)\s*(°c|°f)\b', 'celsius'),
+            (r'\bfahrenheit\b', 'celsius'),
+            (r'\bflipkart\.com\b', ''),
+            (r'\bapprox\.?\b', 'approximately'),
+            (r'\bw/o\b', 'without'),
+            (r'\bw/\b', 'with'),
+            (r'\bant-\b', 'anti'),
+            (r'\byes\b', ''),
+            (r'\bno\b', ''),
+            (r'\bna\b', ''),
+            (r'\brs\.?\b', ''),
+            # Normaliser les espaces
+            (r'\s+', ' '),
+        ]
+        
+        # Appliquer les patterns deux fois comme dans le notebook
+        for _ in range(2):
+            for pattern, replacement in all_patterns:
+                text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
+        
+        return text.strip()
+    
+    def _extract_keywords_like_notebook(self, text: str, top_n: int = 15) -> list:
+        """Extraction de mots-clés identique au notebook (extract_keywords function)"""
+        if not text:
+            return []
+        
+        # Mots vides à ignorer (comme dans le notebook)
+        stop_words = {
+            'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by',
+            'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did',
+            'will', 'would', 'could', 'should', 'may', 'might', 'must', 'can', 'this', 'that', 'these', 'those',
+            'i', 'you', 'he', 'she', 'it', 'we', 'they', 'me', 'him', 'her', 'us', 'them'
+        }
+        
+        # Nettoyage et extraction des mots
+        words = re.findall(r'\b[a-zA-Z]+\b', text.lower())
+        keywords = []
+        
+        for word in words:
+            # Filtrer comme dans le notebook
+            if (len(word) >= 2 and 
+                word not in stop_words and 
+                not re.match(r'.*[@*/±&%#].*', word)):
+                keywords.append(word)
+        
+        # Compter et retourner les top mots-clés
+        from collections import Counter
+        keyword_counts = Counter(keywords)
+        return [word for word, count in keyword_counts.most_common(top_n)]
+    
     def predict_category(self, image: Image.Image, text_description: str, product_keywords: str = None) -> Dict[str, Any]:
         """
         Prédire la catégorie d'un produit (LOGIQUE IDENTIQUE AU NOTEBOOK)
@@ -156,17 +375,22 @@ class AzureMLClient:
             return self._predict_azure(image, text_description, product_keywords)
     
     def _predict_azure(self, image: Image.Image, text_description: str, product_keywords: str = None) -> Dict[str, Any]:
-        """Prédiction via l'API Azure ML avec interprétabilité (LOGIQUE IDENTIQUE AU NOTEBOOK)"""
+        """Prédiction via l'API Azure ML avec prétraitement identique au notebook"""
         try:
-            # Encoder l'image
-            image_base64 = self.encode_image_to_base64(image)
+            # PRÉTRAITEMENT IDENTIQUE AU NOTEBOOK
             
-            # Préparer les données avec l'image pour l'interprétabilité
-            # Format compatible avec le service Azure ML actuel
+            # 1. Prétraitement de l'image (comme dans extract_image_features)
+            processed_image = self._preprocess_image_like_notebook(image)
+            image_base64 = self.encode_image_to_base64(processed_image)
+            
+            # 2. Prétraitement du texte (comme dans clean_text + extract_keywords)
+            processed_text = self._preprocess_text_like_notebook(text_description, product_keywords)
+            
+            # Préparer les données avec le prétraitement identique au notebook
             data = {
-                "image": image_base64,  # Ajouter l'image pour l'interprétabilité
-                "text": text_description,  # Utiliser 'text' au lieu de 'text_description'
-                "product_keywords": product_keywords  # Mots-clés du CSV
+                "image": image_base64,
+                "text": processed_text,  # Texte prétraité comme dans le notebook
+                "product_keywords": product_keywords
             }
             
             # Headers pour l'authentification
