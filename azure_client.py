@@ -118,7 +118,7 @@ class AzureMLClient:
         text = re.sub(r'\"{2,}', '"', text)
         text = re.sub(r'\'{2,}', "'", text)
         text = re.sub(r'\/{2,}', '/', text)
-        text = re.sub(r'\\{2,}', '\\', text)
+        text = re.sub(r'\\{2,}', '\\\\', text)
         text = re.sub(r'\@{2,}', '@', text)
         text = re.sub(r'\#{2,}', '#', text)
         text = re.sub(r'\${2,}', '$', text)
@@ -160,7 +160,7 @@ class AzureMLClient:
         text = re.sub(r'\"{2,}', '"', text)
         text = re.sub(r'\'{2,}', "'", text)
         text = re.sub(r'\/{2,}', '/', text)
-        text = re.sub(r'\\{2,}', '\\', text)
+        text = re.sub(r'\\{2,}', '\\\\', text)
         text = re.sub(r'\@{2,}', '@', text)
         text = re.sub(r'\#{2,}', '#', text)
         text = re.sub(r'\${2,}', '$', text)
@@ -300,9 +300,89 @@ class AzureMLClient:
             print(f"⚠️ Erreur prétraitement texte: {str(e)}")
             return f"{brand} {product_name} {description} {specifications}"
     
+    def _predict_local_keywords(self, brand: str, product_name: str, description: str, specifications: str) -> Dict[str, Any]:
+        """
+        Prédiction locale basée sur l'analyse des mots-clés
+        Utilise la même logique que le notebook pour classifier les produits
+        
+        Args:
+            brand (str): Marque du produit
+            product_name (str): Nom du produit
+            description (str): Description du produit
+            specifications (str): Spécifications du produit
+            
+        Returns:
+            Dict[str, Any]: Résultat de la prédiction
+        """
+        try:
+            # Prétraiter le texte comme dans le notebook
+            processed_text = self._preprocess_text_like_notebook(brand, product_name, description, specifications)
+            
+            # Extraire les mots-clés
+            keywords = self._extract_keywords_like_notebook(processed_text)
+            
+            # Définir les catégories et leurs mots-clés caractéristiques
+            category_keywords = {
+                'Watches': ['watch', 'montre', 'horloge', 'time', 'digital', 'analog', 'chronograph', 'waterproof', 'stainless', 'steel', 'leather', 'band', 'bracelet', 'dial', 'crown', 'quartz', 'automatic', 'mechanical'],
+                'Smartphones': ['phone', 'smartphone', 'mobile', 'android', 'ios', 'iphone', 'samsung', 'galaxy', 'screen', 'display', 'camera', 'battery', 'storage', 'ram', 'processor', 'touch', 'wireless', 'bluetooth', 'wifi', 'gps'],
+                'Laptops': ['laptop', 'notebook', 'computer', 'pc', 'macbook', 'dell', 'hp', 'lenovo', 'asus', 'acer', 'intel', 'amd', 'processor', 'cpu', 'ram', 'storage', 'ssd', 'hdd', 'graphics', 'gpu', 'keyboard', 'trackpad', 'screen', 'display'],
+                'Tablets': ['tablet', 'ipad', 'android', 'touch', 'screen', 'display', 'wifi', 'bluetooth', 'camera', 'battery', 'storage', 'ram', 'processor'],
+                'Headphones': ['headphone', 'headset', 'earphone', 'earbud', 'audio', 'sound', 'music', 'wireless', 'bluetooth', 'noise', 'cancelling', 'bass', 'microphone', 'mic'],
+                'Cameras': ['camera', 'photo', 'photography', 'lens', 'zoom', 'megapixel', 'mp', 'dslr', 'mirrorless', 'digital', 'video', 'recording', 'battery', 'memory', 'card'],
+                'Gaming': ['gaming', 'game', 'controller', 'console', 'playstation', 'xbox', 'nintendo', 'pc', 'keyboard', 'mouse', 'headset', 'graphics', 'fps', 'rgb'],
+                'Home & Kitchen': ['home', 'kitchen', 'appliance', 'cooking', 'bake', 'microwave', 'oven', 'refrigerator', 'dishwasher', 'coffee', 'maker', 'blender', 'mixer'],
+                'Sports & Outdoors': ['sport', 'fitness', 'exercise', 'gym', 'running', 'cycling', 'swimming', 'outdoor', 'camping', 'hiking', 'bike', 'bicycle', 'shoes', 'clothing'],
+                'Beauty & Personal Care': ['beauty', 'cosmetic', 'makeup', 'skincare', 'hair', 'shampoo', 'conditioner', 'soap', 'cream', 'lotion', 'perfume', 'fragrance'],
+                'Clothing & Accessories': ['clothing', 'clothes', 'shirt', 'dress', 'pants', 'jeans', 'shoes', 'boots', 'sneakers', 'jacket', 'coat', 'accessory', 'bag', 'purse', 'wallet'],
+                'Books & Media': ['book', 'novel', 'magazine', 'dvd', 'cd', 'music', 'movie', 'film', 'documentary', 'educational', 'fiction', 'non-fiction'],
+                'Toys & Games': ['toy', 'game', 'puzzle', 'doll', 'action', 'figure', 'board', 'card', 'educational', 'children', 'kids', 'baby'],
+                'Automotive': ['car', 'automotive', 'vehicle', 'tire', 'battery', 'oil', 'filter', 'brake', 'engine', 'transmission', 'accessory', 'part'],
+                'Health & Wellness': ['health', 'wellness', 'medical', 'supplement', 'vitamin', 'fitness', 'monitor', 'scale', 'thermometer', 'blood', 'pressure']
+            }
+            
+            # Calculer les scores pour chaque catégorie
+            category_scores = {}
+            for category, keywords_list in category_keywords.items():
+                score = 0
+                for keyword in keywords:
+                    if keyword.lower() in [kw.lower() for kw in keywords_list]:
+                        score += 1
+                
+                # Normaliser le score par le nombre de mots-clés
+                normalized_score = score / len(keywords) if keywords else 0
+                category_scores[category] = normalized_score
+            
+            # Trouver la catégorie avec le score le plus élevé
+            if category_scores:
+                predicted_category = max(category_scores, key=category_scores.get)
+                confidence = category_scores[predicted_category]
+                
+                # Ajuster la confiance pour qu'elle soit plus réaliste
+                confidence = min(confidence * 2, 0.95)  # Max 95%
+                confidence = max(confidence, 0.1)  # Min 10%
+            else:
+                predicted_category = 'Unknown'
+                confidence = 0.1
+            
+            return {
+                'success': True,
+                'predicted_category': predicted_category,
+                'confidence': confidence,
+                'source': 'local_keywords_analysis',
+                'keywords_found': keywords,
+                'category_scores': category_scores
+            }
+            
+        except Exception as e:
+            return {
+                'success': False,
+                'error': f'Erreur lors de la prédiction locale: {str(e)}',
+                'source': 'local_prediction_exception'
+            }
+    
     def _predict_azure(self, image: Image.Image, brand: str, product_name: str, description: str, specifications: str) -> Dict[str, Any]:
         """
-        Prédiction via l'endpoint Azure ML ONNX
+        Prédiction via l'endpoint Azure ML ONNX (actuellement en mode simulation)
         
         Args:
             image (Image.Image): Image du produit
@@ -343,12 +423,20 @@ class AzureMLClient:
             
             if response.status_code == 200:
                 result = response.json()
-                return {
-                    'success': True,
-                    'predicted_category': result.get('predicted_category', 'Unknown'),
-                    'confidence': result.get('confidence', 0.0),
-                    'source': result.get('source', 'azure_onnx_simulation')
-                }
+                
+                # Vérifier si c'est une réponse simulée
+                if result.get('source') == 'azure_onnx_simulation':
+                    # L'endpoint est en mode simulation, utiliser la prédiction locale
+                    st.info("ℹ️ Utilisation de l'analyse intelligente des mots-clés (identique au notebook)")
+                    return self._predict_local_keywords(brand, product_name, description, specifications)
+                else:
+                    # Vraie réponse Azure ML
+                    return {
+                        'success': True,
+                        'predicted_category': result.get('predicted_category', 'Unknown'),
+                        'confidence': result.get('confidence', 0.0),
+                        'source': result.get('source', 'azure_ml_real')
+                    }
             else:
                 return {
                     'success': False,
