@@ -38,7 +38,7 @@ st.header("📊 Statut actuel de la configuration")
 
 # Configuration de production
 config = {
-    'endpoint_url': "https://clip-onnx-interpretability.azurewebsites.net/score",
+    'endpoint_url': "http://localhost:5000/score",
     'api_key': "dummy_key",
     'source': 'azure_ml_production'
 }
@@ -71,7 +71,7 @@ try:
     with col1:
         st.write(f"**Config Source:** {azure_client.config_source}")
         st.write(f"**Endpoint URL:** {azure_client.endpoint_url}")
-        st.write(f"**Is ONNX:** {azure_client.is_onnx}")
+        st.write(f"**Is PyTorch:** {azure_client.is_pytorch}")
     
     with col2:
         # Test de connectivité
@@ -105,7 +105,7 @@ if is_cloud:
     4. **Ajoutez les secrets suivants :**
     
     ```toml
-    AZURE_ML_ENDPOINT_URL = "https://clip-onnx-interpretability.azurewebsites.net/score"
+    AZURE_ML_ENDPOINT_URL = "http://localhost:5000/score"
     AZURE_ML_API_KEY = "dummy_key"
     ```
     
@@ -124,11 +124,11 @@ else:
 st.header("🔗 Informations sur l'endpoint")
 
 st.markdown("""
-### 📡 Endpoint Azure ML ONNX
+### 📡 Endpoint Azure ML PyTorch
 
-**URL:** `https://clip-onnx-interpretability.azurewebsites.net/score`
+**URL:** `http://localhost:5000/score`
 
-**Type:** Modèle CLIP optimisé ONNX
+**Type:** Modèle CLIP PyTorch finetuné
 
 **Fonctionnalités:**
 - ✅ Classification d'images
@@ -149,7 +149,7 @@ st.markdown("""
 {
     "predicted_category": "Watches",
     "confidence": 0.892,
-    "source": "azure_onnx_simulation"
+    "source": "azure_ml_pytorch_real"
 }
 ```
 """)

@@ -17,11 +17,11 @@ st.set_page_config(
 st.markdown("""
 # 🔮 Application de Classification de Produits
 
-Bienvenue dans l'application de classification de produits utilisant **Azure ML ONNX** !
+Bienvenue dans l'application de classification de produits utilisant **Azure ML PyTorch** !
 
 ## 🚀 Fonctionnalités
 
-- ✅ **Classification d'images** via Azure ML ONNX
+- ✅ **Classification d'images** via Azure ML PyTorch
 - ✅ **Prétraitement identique** au notebook de référence
 - ✅ **Interface d'accessibilité** complète
 - ✅ **Gestion robuste** des erreurs
@@ -80,7 +80,7 @@ with col3:
 st.markdown("---")
 st.info("""
 **💡 Informations techniques :**
-- **Backend** : Azure ML ONNX (`https://clip-onnx-interpretability.azurewebsites.net/score`)
+- **Backend** : Azure ML PyTorch (`http://localhost:5000/score`)
 - **Modèle** : CLIP optimisé pour la classification de produits
 - **Prétraitement** : Identique au notebook de référence
 - **Dataset** : 1050 produits avec images et métadonnées

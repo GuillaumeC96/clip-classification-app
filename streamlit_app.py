@@ -17,11 +17,11 @@ st.set_page_config(
 st.markdown("""
 # 🔮 Application de Classification de Produits
 
-Bienvenue dans l'application de classification de produits utilisant Azure ML ONNX !
+Bienvenue dans l'application de classification de produits utilisant Azure ML PyTorch !
 
 ## 🚀 Fonctionnalités
 
-- ✅ **Classification d'images** via Azure ML ONNX
+- ✅ **Classification d'images** via Azure ML PyTorch
 - ✅ **Prétraitement identique** au notebook de référence
 - ✅ **Interface d'accessibilité** complète
 - ✅ **Gestion robuste** des erreurs

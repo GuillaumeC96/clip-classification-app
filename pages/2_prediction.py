@@ -1,6 +1,6 @@
 """
 Page de prédiction de catégorie de produits
-Utilise Azure ML ONNX pour la classification d'images et de texte
+Utilise Azure ML PyTorch pour la classification d'images et de texte
 """
 
 import os
@@ -197,7 +197,7 @@ if st.button("🔮 Prédire la catégorie", type="primary"):
         st.stop()
     
     with st.spinner("🔄 Analyse en cours..."):
-        # Prédiction avec Azure ML ONNX
+        # Prédiction avec Azure ML PyTorch
         result = azure_client.predict_category(image, brand, product_name, description, specifications)
         
         # Affichage des résultats
@@ -247,5 +247,5 @@ if st.button("🔮 Prédire la catégorie", type="primary"):
 
 # Informations sur le modèle
 st.markdown("---")
-st.success("✅ Système de prédiction Azure ML ONNX initialisé")
+st.success("✅ Système de prédiction Azure ML PyTorch initialisé")
 st.info("💡 Prêt pour l'analyse d'images et la classification de produits")

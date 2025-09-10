@@ -15,9 +15,10 @@ from typing import Dict, Any
 
 class AzureMLClient:
     """
-    Client pour interagir avec l'API Azure ML ONNX
+    Client pour interagir avec l'API Azure ML PyTorch
     Utilise exclusivement l'endpoint cloud pour les prédictions
     """
+    
     
     def __init__(self, show_warning=True):
         """
@@ -26,20 +27,36 @@ class AzureMLClient:
         Args:
             show_warning (bool): Afficher les messages de configuration
         """
-        # Configuration de l'endpoint Azure ML de production
-        self.endpoint_url = "https://clip-onnx-interpretability.azurewebsites.net/score"
-        self.api_key = "dummy_key"  # Clé factice pour l'endpoint public
-        self.config_source = 'azure_ml_production'
+        # Configuration pour Streamlit Cloud - utiliser les secrets
+        try:
+            # Essayer de lire les secrets Streamlit Cloud
+            if hasattr(st, 'secrets') and 'azure_ml' in st.secrets:
+                self.endpoint_url = st.secrets.azure_ml.endpoint_url
+                self.api_key = st.secrets.azure_ml.api_key
+                self.config_source = 'azure_ml_pytorch_cloud'
+                print("✅ Configuration Azure ML chargée depuis Streamlit Cloud secrets")
+            else:
+                # Fallback vers la configuration locale
+                self.endpoint_url = "http://localhost:5000/score"
+                self.api_key = "dummy_key"
+                self.config_source = 'azure_ml_pytorch_local'
+                print("⚠️ Utilisation de la configuration locale (pas de secrets Streamlit Cloud)")
+        except Exception as e:
+            # Configuration par défaut
+            self.endpoint_url = "http://localhost:5000/score"
+            self.api_key = "dummy_key"
+            self.config_source = 'azure_ml_pytorch_default'
+            print(f"⚠️ Erreur de configuration: {str(e)}")
         
-        # Vérifier que c'est bien un endpoint ONNX
-        self.is_onnx = 'onnx' in self.endpoint_url.lower()
+        # Vérifier que c'est bien un endpoint PyTorch
+        self.is_pytorch = True  # Maintenant on utilise PyTorch
         
         # Afficher le statut de la configuration
         if show_warning:
-            st.success("✅ Client Azure ML initialisé - Endpoint de production")
+            st.success("✅ Client Azure ML initialisé - Modèle PyTorch finetuné")
             st.info(f"🔗 Endpoint: {self.endpoint_url}")
-    
-    def _preprocess_image_like_notebook(self, image: Image.Image) -> Image.Image:
+            st.info(f"🎯 Source: {self.config_source}")
+def _preprocess_image_like_notebook(self, image: Image.Image) -> Image.Image:
         """
         Prétraitement de l'image identique au notebook (extract_image_features)
         
@@ -406,7 +423,7 @@ class AzureMLClient:
     
     def _predict_azure(self, image: Image.Image, brand: str, product_name: str, description: str, specifications: str) -> Dict[str, Any]:
         """
-        Prédiction via l'endpoint Azure ML ONNX (actuellement en mode simulation)
+        Prédiction via l'endpoint Azure ML PyTorch (modèle finetuné réel)
         
         Args:
             image (Image.Image): Image du produit
@@ -422,22 +439,22 @@ class AzureMLClient:
             # Prétraiter l'image comme dans le notebook
             processed_image = self._preprocess_image_like_notebook(image)
             
-            # Prétraiter le texte comme dans le notebook
-            processed_text = self._preprocess_text_like_notebook(brand, product_name, description, specifications)
-            
             # Convertir l'image en base64
             buffer = io.BytesIO()
             processed_image.save(buffer, format='JPEG', quality=85)
             img_bytes = buffer.getvalue()
             image_base64 = base64.b64encode(img_bytes).decode('utf-8')
             
-            # Préparer les données pour l'API
+            # Préparer les données pour l'API PyTorch (format identique au notebook)
             data = {
                 'image': image_base64,
-                'text': processed_text
+                'brand': brand,
+                'product_name': product_name,
+                'description': description,
+                'specifications': specifications
             }
             
-            # Appel à l'API Azure ML
+            # Appel à l'API Azure ML PyTorch
             response = requests.post(
                 self.endpoint_url,
                 json=data,
@@ -448,19 +465,20 @@ class AzureMLClient:
             if response.status_code == 200:
                 result = response.json()
                 
-                # Vérifier si c'est une réponse simulée
-                if result.get('source') == 'azure_onnx_simulation':
-                    # L'endpoint est en mode simulation, utiliser la prédiction locale améliorée
-                    st.info("ℹ️ Utilisation de l'analyse intelligente des mots-clés (identique au notebook)")
-                    return self._predict_local_keywords(brand, product_name, description, specifications)
-                else:
-                    # Vraie réponse Azure ML
+                # Vérifier si c'est une réponse PyTorch réelle
+                if result.get('source') == 'azure_ml_pytorch_real':
+                    # Vraie réponse du modèle PyTorch finetuné
                     return {
                         'success': True,
                         'predicted_category': result.get('predicted_category', 'Unknown'),
                         'confidence': result.get('confidence', 0.0),
-                        'source': result.get('source', 'azure_ml_real')
+                        'source': result.get('source', 'azure_ml_pytorch_real'),
+                        'message': result.get('message', 'Prédiction réalisée avec le modèle PyTorch CLIP fine-tuné')
                     }
+                else:
+                    # Fallback vers l'analyse locale si nécessaire
+                    st.info("ℹ️ Utilisation de l'analyse intelligente des mots-clés (identique au notebook)")
+                    return self._predict_local_keywords(brand, product_name, description, specifications)
             else:
                 return {
                     'success': False,
@@ -477,7 +495,7 @@ class AzureMLClient:
     
     def predict_category(self, image: Image.Image, brand: str, product_name: str, description: str, specifications: str) -> Dict[str, Any]:
         """
-        Prédiction de catégorie de produit via Azure ML ONNX
+        Prédiction de catégorie de produit via Azure ML PyTorch
         
         Args:
             image (Image.Image): Image du produit
@@ -489,7 +507,7 @@ class AzureMLClient:
         Returns:
             Dict[str, Any]: Résultat de la prédiction avec catégorie et confiance
         """
-        # Utiliser exclusivement l'endpoint Azure ML
+        # Utiliser exclusivement l'endpoint Azure ML PyTorch
         return self._predict_azure(image, brand, product_name, description, specifications)
     
     def get_service_status(self) -> Dict[str, Any]:

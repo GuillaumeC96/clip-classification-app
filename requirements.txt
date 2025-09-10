@@ -1,13 +1,8 @@
-streamlit
-flask
-pillow
-numpy
-requests
-plotly
-pandas
-scikit-learn
-matplotlib
-seaborn
-python-dotenv
-wordcloud
-scipy
+
+torch>=1.13.0
+torchvision>=0.14.0
+transformers>=4.21.0
+pillow>=9.2.0
+numpy>=1.21.0
+# onnxruntime>=1.12.0  # Supprimé - migration vers PyTorch
+requests>=2.28.0
