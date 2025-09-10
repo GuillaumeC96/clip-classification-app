@@ -342,42 +342,61 @@ class AzureMLClient:
             return {predicted_category: 0.9} if predicted_category else {}
     
     def _generate_simulated_heatmap(self, image: Image.Image, text_description: str) -> Dict[str, Any]:
-        """Générer une heatmap simulée pour l'interprétabilité"""
+        """Générer une heatmap simulée basée sur le notebook CLIP"""
         try:
             import numpy as np
+            from scipy.interpolate import griddata
             
-            # Créer une heatmap de taille fixe (plus petite pour un meilleur affichage)
-            heatmap_size = 64  # 64x64 pixels
-            heatmap = np.zeros((heatmap_size, heatmap_size))
+            # Obtenir les dimensions de l'image
+            img_width, img_height = image.size
             
-            # Zone centrale avec plus d'attention
-            center = heatmap_size // 2
-            y, x = np.ogrid[:heatmap_size, :heatmap_size]
+            # Créer une grille de points comme dans le notebook
+            resolution = 30  # Réduction pour performance
+            x = np.linspace(0, img_width, resolution, dtype=int)
+            y = np.linspace(0, img_height, resolution, dtype=int)
+            xx, yy = np.meshgrid(x, y)
             
-            # Zone centrale circulaire
-            mask_center = ((x - center)**2 + (y - center)**2) < (heatmap_size // 4)**2
-            heatmap[mask_center] = 0.8
+            # Générer des scores d'attention simulés
+            positions = []
+            attention_scores = []
             
-            # Ajouter des zones d'attention secondaires
-            # Zone en haut à droite
-            mask_tr = ((x - center*1.2)**2 + (y - center*0.8)**2) < (heatmap_size // 8)**2
-            heatmap[mask_tr] = 0.6
+            for i in range(resolution):
+                for j in range(resolution):
+                    x_pos = xx[i, j]
+                    y_pos = yy[i, j]
+                    positions.append([x_pos, y_pos])
+                    
+                    # Simuler des scores d'attention basés sur la position
+                    # Zone centrale = attention élevée
+                    center_x, center_y = img_width // 2, img_height // 2
+                    distance_from_center = np.sqrt((x_pos - center_x)**2 + (y_pos - center_y)**2)
+                    max_distance = np.sqrt(center_x**2 + center_y**2)
+                    
+                    # Score basé sur la distance du centre (plus proche = score plus élevé)
+                    base_score = 1.0 - (distance_from_center / max_distance)
+                    
+                    # Ajouter de la variation pour simuler l'attention CLIP
+                    variation = np.random.normal(0, 0.1)
+                    score = np.clip(base_score + variation, 0, 1)
+                    
+                    attention_scores.append(score)
             
-            # Zone en bas à gauche
-            mask_bl = ((x - center*0.8)**2 + (y - center*1.2)**2) < (heatmap_size // 8)**2
-            heatmap[mask_bl] = 0.4
+            positions = np.array(positions)
+            attention_scores = np.array(attention_scores)
             
-            # Ajouter du bruit pour rendre plus réaliste
-            noise = np.random.rand(heatmap_size, heatmap_size) * 0.1
-            heatmap = heatmap + noise
+            # Créer une grille fine pour l'interpolation (comme dans le notebook)
+            grid_x, grid_y = np.mgrid[0:img_width:complex(0, img_width), 0:img_height:complex(0, img_height)]
             
-            # Normaliser entre 0 et 1
-            heatmap = np.clip(heatmap, 0, 1)
+            # Interpolation pour créer une heatmap lisse
+            smooth_heatmap = griddata(positions, attention_scores, (grid_x, grid_y), method='cubic', fill_value=0)
+            
+            # Normaliser comme dans le notebook
+            smooth_heatmap = (smooth_heatmap - smooth_heatmap.min()) / (smooth_heatmap.max() - smooth_heatmap.min())
             
             # Extraire des mots-clés de la description
             keywords = []
             words = text_description.lower().split()
-            important_words = ['watch', 'montre', 'analog', 'digital', 'steel', 'stainless', 'quartz', 'water', 'resistant', 'timepiece', 'wrist', 'accessory']
+            important_words = ['watch', 'montre', 'analog', 'digital', 'steel', 'stainless', 'quartz', 'water', 'resistant', 'timepiece', 'wrist', 'accessory', 'smartphone', 'phone', 'laptop', 'computer', 'beauty', 'care', 'kitchen', 'dining', 'furniture', 'home', 'decor']
             
             for word in words:
                 if word in important_words and word not in keywords:
@@ -385,16 +404,21 @@ class AzureMLClient:
             
             # Ajouter des mots-clés génériques si pas assez
             if len(keywords) < 3:
-                keywords.extend(['timepiece', 'wrist', 'accessory'])
+                keywords.extend(['product', 'item', 'object'])
             
             return {
-                'heatmap': heatmap,
+                'heatmap': smooth_heatmap,
                 'keywords': keywords[:5]
             }
             
         except Exception as e:
             print(f"❌ Erreur génération heatmap simulée: {e}")
-            return None
+            # Fallback simple
+            import numpy as np
+            return {
+                'heatmap': np.random.rand(100, 100),
+                'keywords': ['product', 'item', 'object']
+            }
     
     def _predict_simulated(self, image: Image.Image, text_description: str) -> Dict[str, Any]:
         """Prédiction simulée intelligente (fallback)"""
