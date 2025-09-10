@@ -36,15 +36,15 @@ class AzureMLClient:
                 self.config_source = 'azure_ml_pytorch_cloud'
                 print("✅ Configuration Azure ML chargée depuis Streamlit Cloud secrets")
             else:
-                # Configuration par défaut Azure ML (pas de localhost)
-                self.endpoint_url = "https://clip-pytorch-endpoint.azureml.inference.net/score"
-                self.api_key = "your-api-key"
+                # Configuration par défaut Azure ML (votre endpoint original)
+                self.endpoint_url = "https://new-clip-classification-app-hrgracfqaegbd9ek.francecentral-01.azurewebsites.net/score"
+                self.api_key = "dummy_key"
                 self.config_source = 'azure_ml_pytorch_default'
                 print("⚠️ Utilisation de la configuration Azure ML par défaut")
         except Exception as e:
-            # Configuration Azure ML par défaut
-            self.endpoint_url = "https://clip-pytorch-endpoint.azureml.inference.net/score"
-            self.api_key = "your-api-key"
+            # Configuration Azure ML par défaut (votre endpoint original)
+            self.endpoint_url = "https://new-clip-classification-app-hrgracfqaegbd9ek.francecentral-01.azurewebsites.net/score"
+            self.api_key = "dummy_key"
             self.config_source = 'azure_ml_pytorch_default'
             print(f"⚠️ Erreur de configuration: {str(e)}")
         

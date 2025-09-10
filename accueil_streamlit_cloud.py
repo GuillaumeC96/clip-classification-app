@@ -80,7 +80,7 @@ with col3:
 st.markdown("---")
 st.info("""
 **💡 Informations techniques :**
-- **Backend** : Azure ML PyTorch (`https://clip-pytorch-endpoint.azureml.inference.net/score`)
+- **Backend** : Azure ML PyTorch (`https://new-clip-classification-app-hrgracfqaegbd9ek.francecentral-01.azurewebsites.net/score`)
 - **Modèle** : CLIP optimisé pour la classification de produits
 - **Prétraitement** : Identique au notebook de référence
 - **Dataset** : 1050 produits avec images et métadonnées
