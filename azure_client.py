@@ -329,52 +329,48 @@ class AzureMLClient:
                         patches.append(patch)
                         positions.append((x, y, min(x+patch_size, img_width), min(y+patch_size, img_height)))
             
-            # Simuler des scores d'attention plus précis basés sur la structure de l'image
-            attention_scores = []
+            # Simuler exactement comme dans le notebook : attention_scores = (patch_features @ text_features.T)
+            # Dans le notebook, ils utilisent de vrais scores CLIP, ici on simule de manière réaliste
             keywords = self._extract_keywords_from_text(text_description)
             
-            # Créer des zones d'attention plus réalistes
+            # Simuler des scores d'attention pour chaque patch (comme patch_features @ text_features.T)
+            # Dans le notebook, attention_scores a la forme (n_patches, n_keywords)
+            n_patches = len(positions)
+            n_keywords = len(keywords)
+            
+            # Créer une matrice de scores d'attention (n_patches, n_keywords)
+            attention_scores = np.zeros((n_patches, n_keywords))
+            
             for i, (x, y, x2, y2) in enumerate(positions):
                 center_x, center_y = (x + x2) // 2, (y + y2) // 2
                 
-                # Score de base basé sur la position (plus réaliste)
-                # Les objets sont souvent au centre ou dans certaines zones
-                img_center_x, img_center_y = img_width // 2, img_height // 2
-                
-                # Distance du centre (normalisée)
-                distance_from_center = np.sqrt((center_x - img_center_x)**2 + (center_y - img_center_y)**2)
-                max_distance = np.sqrt(img_center_x**2 + img_center_y**2)
-                center_score = np.exp(-distance_from_center / (max_distance * 0.3))  # Décroissance exponentielle
-                
-                # Bonus pour les zones où on s'attend à trouver des objets
-                # Zone centrale (objet principal)
-                if distance_from_center < max_distance * 0.4:
-                    center_score *= 1.5
-                
-                # Zone haute (tête/partie supérieure d'un objet)
-                if y < img_height * 0.3:
-                    center_score *= 1.2
-                
-                # Zone basse (base/support d'un objet)
-                if y > img_height * 0.7:
-                    center_score *= 1.1
-                
-                # Bonus pour les mots-clés pertinents (plus subtil)
-                keyword_bonus = 0.0
-                for keyword in keywords:
+                # Pour chaque mot-clé, calculer un score d'attention
+                for j, keyword in enumerate(keywords):
+                    # Score de base basé sur la position du patch
+                    img_center_x, img_center_y = img_width // 2, img_height // 2
+                    distance_from_center = np.sqrt((center_x - img_center_x)**2 + (center_y - img_center_y)**2)
+                    max_distance = np.sqrt(img_center_x**2 + img_center_y**2)
+                    
+                    # Score de position (plus élevé au centre)
+                    position_score = 1.0 - (distance_from_center / max_distance)
+                    
+                    # Bonus si le mot-clé est pertinent pour ce patch
+                    keyword_relevance = 0.0
                     if keyword.lower() in text_description.lower():
-                        keyword_bonus += 0.2
-                
-                # Variation très faible pour éviter l'effet "neige"
-                variation = np.random.normal(0, 0.02)
-                
-                final_score = center_score + keyword_bonus + variation
-                attention_scores.append(max(0, min(1, final_score)))
+                        # Simuler que certains patches sont plus pertinents pour certains mots-clés
+                        keyword_relevance = np.random.uniform(0.3, 0.8)
+                    
+                    # Score final pour ce patch et ce mot-clé
+                    attention_scores[i, j] = position_score + keyword_relevance
+            
+            # Normaliser les scores comme dans le notebook
+            attention_scores = (attention_scores - attention_scores.min()) / (attention_scores.max() - attention_scores.min())
             
             # Utiliser exactement la même interpolation que le notebook
+            # Dans le notebook : smooth_heatmap = griddata(points, attention_scores.mean(axis=1), (grid_x, grid_y), method='cubic', fill_value=0)
             points = np.array(positions)
             grid_x, grid_y = np.mgrid[0:img_width:complex(0, img_width), 0:img_height:complex(0, img_height)]
-            smooth_heatmap = griddata(points, attention_scores, (grid_x, grid_y), method='cubic', fill_value=0)
+            smooth_heatmap = griddata(points, attention_scores.mean(axis=1), (grid_x, grid_y), method='cubic', fill_value=0)
             smooth_heatmap = (smooth_heatmap - smooth_heatmap.min()) / (smooth_heatmap.max() - smooth_heatmap.min())
             
             # NE PAS inverser les valeurs - le notebook utilise les valeurs directement
