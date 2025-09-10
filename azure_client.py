@@ -235,7 +235,7 @@ class AzureMLClient:
     
     def generate_attention_heatmap(self, image: Image.Image, text_description: str, product_keywords: str = None) -> Optional[Dict[str, Any]]:
         """
-        Générer une heatmap d'attention via l'API Azure ML ONNX
+        Générer une heatmap d'attention (simulée pour l'instant)
         
         Args:
             image: Image PIL du produit
@@ -246,59 +246,14 @@ class AzureMLClient:
             Dict contenant la heatmap d'attention ou None
         """
         try:
-            # Encoder l'image
-            image_b64 = self.encode_image_to_base64(image)
-            
-            # Préparer les données - utiliser le même format que predict_category
-            data = {
-                "image": image_b64,
-                "text": text_description,  # Utiliser 'text' comme dans predict_category
-                "product_keywords": product_keywords,
-                "action": "heatmap"  # Demander spécifiquement la heatmap
-            }
-            
-            # Headers
-            headers = {
-                'Content-Type': 'application/json'
-            }
-            
-            if self.api_key:
-                headers['Authorization'] = f'Bearer {self.api_key}'
-            
-            # Appel API
-            response = requests.post(
-                self.endpoint_url,
-                data=json.dumps(data),
-                headers=headers,
-                timeout=120
-            )
-            
-            if response.status_code == 200:
-                result = response.json()
-                if 'heatmap' in result:
-                    # Convertir la heatmap de liste vers numpy array
-                    import numpy as np
-                    result['heatmap'] = np.array(result['heatmap'])
-                    return result
-                elif 'attention_result' in result:
-                    # Si la heatmap est dans attention_result
-                    attention_data = result['attention_result']
-                    if 'heatmap' in attention_data:
-                        import numpy as np
-                        attention_data['heatmap'] = np.array(attention_data['heatmap'])
-                        return attention_data
-                    else:
-                        return None
-                else:
-                    # Si pas de heatmap, créer une simulation basique
-                    return self._generate_simulated_heatmap(image, text_description)
-            else:
-                st.warning(f"⚠️ Erreur API Azure ML: {response.status_code} - Génération d'une heatmap simulée")
-                return self._generate_simulated_heatmap(image, text_description)
+            # Pour l'instant, utiliser directement la heatmap simulée
+            # car l'API Azure ML ne semble pas supporter la génération de heatmap
+            print(f"🔍 Génération de heatmap simulée pour: {text_description[:50]}...")
+            return self._generate_simulated_heatmap(image, text_description)
                 
         except Exception as e:
-            st.warning(f"⚠️ Erreur lors de la génération de heatmap: {str(e)} - Génération d'une heatmap simulée")
-            return self._generate_simulated_heatmap(image, text_description)
+            print(f"❌ Erreur lors de la génération de heatmap: {str(e)}")
+            return None
     
     def _generate_simulated_scores(self, predicted_category: str, text_description: str) -> Dict[str, float]:
         """Générer des scores simulés pour toutes les catégories"""
