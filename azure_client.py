@@ -329,26 +329,44 @@ class AzureMLClient:
                         patches.append(patch)
                         positions.append((x, y, min(x+patch_size, img_width), min(y+patch_size, img_height)))
             
-            # Simuler des scores d'attention pour chaque patch
+            # Simuler des scores d'attention plus précis basés sur la structure de l'image
             attention_scores = []
             keywords = self._extract_keywords_from_text(text_description)
             
+            # Créer des zones d'attention plus réalistes
             for i, (x, y, x2, y2) in enumerate(positions):
-                # Score basé sur la position du patch
                 center_x, center_y = (x + x2) // 2, (y + y2) // 2
-                img_center_x, img_center_y = img_width // 2, img_height // 2
-                distance = np.sqrt((center_x - img_center_x)**2 + (center_y - img_center_y)**2)
-                max_distance = np.sqrt(img_center_x**2 + img_center_y**2)
-                center_score = 1.0 - (distance / max_distance)
                 
-                # Bonus pour les mots-clés pertinents
+                # Score de base basé sur la position (plus réaliste)
+                # Les objets sont souvent au centre ou dans certaines zones
+                img_center_x, img_center_y = img_width // 2, img_height // 2
+                
+                # Distance du centre (normalisée)
+                distance_from_center = np.sqrt((center_x - img_center_x)**2 + (center_y - img_center_y)**2)
+                max_distance = np.sqrt(img_center_x**2 + img_center_y**2)
+                center_score = np.exp(-distance_from_center / (max_distance * 0.3))  # Décroissance exponentielle
+                
+                # Bonus pour les zones où on s'attend à trouver des objets
+                # Zone centrale (objet principal)
+                if distance_from_center < max_distance * 0.4:
+                    center_score *= 1.5
+                
+                # Zone haute (tête/partie supérieure d'un objet)
+                if y < img_height * 0.3:
+                    center_score *= 1.2
+                
+                # Zone basse (base/support d'un objet)
+                if y > img_height * 0.7:
+                    center_score *= 1.1
+                
+                # Bonus pour les mots-clés pertinents (plus subtil)
                 keyword_bonus = 0.0
                 for keyword in keywords:
                     if keyword.lower() in text_description.lower():
-                        keyword_bonus += 0.4
+                        keyword_bonus += 0.2
                 
-                # Variation aléatoire pour plus de réalisme
-                variation = np.random.normal(0, 0.1)
+                # Variation très faible pour éviter l'effet "neige"
+                variation = np.random.normal(0, 0.02)
                 
                 final_score = center_score + keyword_bonus + variation
                 attention_scores.append(max(0, min(1, final_score)))
