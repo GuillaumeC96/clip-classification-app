@@ -114,14 +114,14 @@ uploaded_file = st.file_uploader(
 if uploaded_file is not None:
     # Afficher l'image
     image = Image.open(uploaded_file)
-    st.image(image, caption="Image uploadée", use_column_width=True)
+    st.image(image, caption="Image uploadée", use_container_width=True)
     
     # Informations sur l'image
     st.info(f"📏 Dimensions : {image.size[0]} x {image.size[1]} pixels")
 elif default_product and st.session_state.get('test_prediction_launched', False):
     # Afficher l'image du produit de test
     image = Image.open(default_product['image_path'])
-    st.image(image, caption="Produit de test", use_column_width=True)
+    st.image(image, caption="Produit de test", use_container_width=True)
     st.info(f"📏 Dimensions : {image.size[0]} x {image.size[1]} pixels")
 
 # Informations du produit

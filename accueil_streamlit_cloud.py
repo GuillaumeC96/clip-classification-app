@@ -187,7 +187,7 @@ def main():
             if uploaded_file is not None:
                 # Afficher l'image
                 image = Image.open(uploaded_file)
-                st.image(image, caption="Image uploadée", use_column_width=True)
+                st.image(image, caption="Image uploadée", use_container_width=True)
                 
                 # Informations sur l'image
                 st.info(f"📏 Dimensions : {image.size[0]} x {image.size[1]} pixels")
