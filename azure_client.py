@@ -312,84 +312,55 @@ class AzureMLClient:
             img_bw = enhancer.enhance(1.5)
             img_bw_array = np.array(img_bw)
             
-            # Extraire les mots-clés exactement comme dans le notebook
-            # Dans le notebook: keywords = list(set(kw.strip() for kw in product['keywords'].split(',') if kw.strip()))
-            # Ici on simule en extrayant des mots-clés de la description
-            keywords = []
-            words = text_description.lower().split()
+            # Utiliser la même approche que le notebook : patch_size=128, step=patch_size
+            patch_size = 128
+            step = patch_size
             
-            # Mots-clés importants par catégorie (comme dans le notebook)
-            category_keywords = {
-                'watch': ['watch', 'montre', 'analog', 'digital', 'steel', 'stainless', 'quartz', 'water', 'resistant', 'timepiece', 'wrist', 'clock'],
-                'computer': ['laptop', 'computer', 'pc', 'desktop', 'monitor', 'keyboard', 'mouse', 'gaming', 'graphics', 'processor'],
-                'beauty': ['beauty', 'care', 'skin', 'hair', 'makeup', 'lotion', 'serum', 'moisturizer', 'cosmetic'],
-                'kitchen': ['kitchen', 'cookware', 'dining', 'plate', 'bowl', 'utensil', 'appliance', 'cuisine'],
-                'furniture': ['furniture', 'sofa', 'chair', 'bed', 'table', 'couch', 'dining', 'meuble'],
-                'decor': ['decor', 'decoration', 'ornament', 'festive', 'wall', 'art', 'frame', 'déco']
-            }
-            
-            # Extraire les mots-clés pertinents
-            for word in words:
-                for category, cat_keywords in category_keywords.items():
-                    if word in cat_keywords and word not in keywords:
-                        keywords.append(word)
-            
-            # Si pas assez de mots-clés, ajouter des génériques
-            if len(keywords) < 3:
-                keywords.extend(['product', 'item', 'object'])
-            
-            # Créer une grille de points comme dans le notebook
-            resolution = 30  # Réduction pour performance mais garder la qualité
-            x = np.linspace(0, img_width, resolution, dtype=int)
-            y = np.linspace(0, img_height, resolution, dtype=int)
-            xx, yy = np.meshgrid(x, y)
-            
-            # Générer des scores d'attention basés sur les mots-clés (comme dans le notebook)
+            # Créer les patches et positions exactement comme dans le notebook
+            patches = []
             positions = []
+            
+            for y in range(0, img_height, step):
+                for x in range(0, img_width, step):
+                    patch = image.crop((x, y, min(x+patch_size, img_width), min(y+patch_size, img_height)))
+                    if patch.size[0] > 0 and patch.size[1] > 0:
+                        patch = patch.convert('RGB')
+                        patch = patch.resize((224, 224), Image.LANCZOS)
+                        patches.append(patch)
+                        positions.append((x, y, min(x+patch_size, img_width), min(y+patch_size, img_height)))
+            
+            # Simuler des scores d'attention pour chaque patch
             attention_scores = []
+            keywords = self._extract_keywords_from_text(text_description)
             
-            for i in range(resolution):
-                for j in range(resolution):
-                    x_pos = xx[i, j]
-                    y_pos = yy[i, j]
-                    positions.append([x_pos, y_pos])
-                    
-                    # Simuler des scores d'attention basés sur la position et les mots-clés
-                    center_x, center_y = img_width // 2, img_height // 2
-                    distance_from_center = np.sqrt((x_pos - center_x)**2 + (y_pos - center_y)**2)
-                    max_distance = np.sqrt(center_x**2 + center_y**2)
-                    
-                    # Score de base basé sur la distance du centre
-                    base_score = 1.0 - (distance_from_center / max_distance)
-                    
-                    # Ajouter de la variation basée sur les mots-clés
-                    keyword_bonus = 0
-                    for keyword in keywords[:3]:  # Top 3 mots-clés
-                        if keyword in text_description.lower():
-                            keyword_bonus += 0.1
-                    
-                    # Variation aléatoire pour simuler l'attention CLIP (plus lisse)
-                    variation = np.random.normal(0, 0.02)  # Réduire la variation pour plus de lissage
-                    score = np.clip(base_score + keyword_bonus + variation, 0, 1)
-                    
-                    attention_scores.append(score)
+            for i, (x, y, x2, y2) in enumerate(positions):
+                # Score basé sur la position du patch
+                center_x, center_y = (x + x2) // 2, (y + y2) // 2
+                img_center_x, img_center_y = img_width // 2, img_height // 2
+                distance = np.sqrt((center_x - img_center_x)**2 + (center_y - img_center_y)**2)
+                max_distance = np.sqrt(img_center_x**2 + img_center_y**2)
+                center_score = 1.0 - (distance / max_distance)
+                
+                # Bonus pour les mots-clés pertinents
+                keyword_bonus = 0.0
+                for keyword in keywords:
+                    if keyword.lower() in text_description.lower():
+                        keyword_bonus += 0.4
+                
+                # Variation aléatoire pour plus de réalisme
+                variation = np.random.normal(0, 0.1)
+                
+                final_score = center_score + keyword_bonus + variation
+                attention_scores.append(max(0, min(1, final_score)))
             
-            positions = np.array(positions)
-            attention_scores = np.array(attention_scores)
-            
-            # Créer une grille fine pour l'interpolation (exactement comme dans le notebook)
-            # Utiliser la même méthode que le notebook avec complex()
+            # Utiliser exactement la même interpolation que le notebook
+            points = np.array(positions)
             grid_x, grid_y = np.mgrid[0:img_width:complex(0, img_width), 0:img_height:complex(0, img_height)]
-            
-            # Interpolation pour créer une heatmap lisse (comme dans le notebook)
-            # Utiliser la même méthode que le notebook
-            smooth_heatmap = griddata(positions, attention_scores, (grid_x, grid_y), method='cubic', fill_value=0)
-            
-            # Normaliser exactement comme dans le notebook
+            smooth_heatmap = griddata(points, attention_scores, (grid_x, grid_y), method='cubic', fill_value=0)
             smooth_heatmap = (smooth_heatmap - smooth_heatmap.min()) / (smooth_heatmap.max() - smooth_heatmap.min())
             
-            # Inverser les valeurs pour que les zones d'attention élevée soient en rouge/orange (comme dans le notebook)
-            smooth_heatmap = 1.0 - smooth_heatmap
+            # NE PAS inverser les valeurs - le notebook utilise les valeurs directement
+            # Les zones d'attention élevée sont déjà en rouge/orange avec cmap='inferno'
             
             return {
                 'heatmap': smooth_heatmap,
