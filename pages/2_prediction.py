@@ -213,13 +213,32 @@ if st.button("🔮 Prédire la catégorie", type="primary"):
             if attention_result and 'heatmap' in attention_result:
                 st.success("✅ Interprétabilité générée avec succès !")
                 
-                # Afficher la heatmap
+                # Afficher la heatmap superposée sur l'image (comme dans le notebook)
                 heatmap_data = attention_result['heatmap']
-                fig, ax = plt.subplots(figsize=(10, 8))
-                im = ax.imshow(heatmap_data, cmap='inferno', alpha=0.7)
+                
+                # Convertir l'image en noir et blanc pour l'arrière-plan
+                img_bw = image.convert('L')
+                img_bw_array = np.array(img_bw)
+                
+                # Créer la figure comme dans le notebook
+                fig, ax = plt.subplots(figsize=(12, 8))
+                
+                # Afficher l'image en noir et blanc en arrière-plan
+                ax.imshow(img_bw_array, cmap='gray', vmin=0, vmax=255)
+                
+                # Superposer la heatmap avec transposition et orientation correcte
+                img_width, img_height = image.size
+                heatmap_layer = ax.imshow(heatmap_data.T, cmap='inferno', alpha=0.55,
+                                        extent=[0, img_width, img_height, 0], 
+                                        interpolation='bicubic')
+                
                 ax.set_title("Heatmap d'Attention CLIP ONNX")
                 ax.axis('off')
-                plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+                
+                # Ajouter la colorbar
+                cbar = plt.colorbar(heatmap_layer, ax=ax, fraction=0.046, pad=0.04)
+                cbar.set_label('Intensité d\'attention', rotation=270, labelpad=15)
+                
                 st.pyplot(fig)
                 
                 # Informations sur les mots-clés
