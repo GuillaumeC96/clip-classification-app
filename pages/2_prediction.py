@@ -3,7 +3,6 @@ Page de prédiction pour la version cloud avec Azure ML
 """
 
 import os
-import pandas as pd
 import streamlit as st
 from PIL import Image
 import numpy as np
@@ -194,16 +193,6 @@ if st.button("🔮 Prédire la catégorie", type="primary"):
                 f"{confidence:.2%}"
             )
             
-            # Scores détaillés si disponibles
-            if 'category_scores' in result:
-                st.subheader("📊 Scores par catégorie")
-                scores_df = pd.DataFrame(
-                    list(result['category_scores'].items()),
-                    columns=['Catégorie', 'Score']
-                ).sort_values('Score', ascending=False)
-                
-                st.bar_chart(scores_df.set_index('Catégorie'))
-                st.dataframe(scores_df)
             
                 
         else:

@@ -417,9 +417,7 @@ class AzureMLClient:
                         'success': True,
                         'predicted_category': result.get('predicted_category'),
                         'confidence': result.get('confidence', 0),
-                        'category_scores': result.get('category_scores', {}),
-                        'source': result.get('source', 'azure_ml'),
-                        'attention_result': result.get('attention_result')  # Ajouter les résultats d'interprétabilité
+                        'source': result.get('source', 'azure_ml')
                     }
                 else:
                     return {
@@ -526,7 +524,6 @@ class AzureMLClient:
                 'success': True,
                 'predicted_category': predicted_category,
                 'confidence': confidence,
-                'category_scores': scores,
                 'source': 'demo_optimized'
             }
         except Exception as e:
